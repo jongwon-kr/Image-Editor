@@ -1,4 +1,3 @@
-// webpack.config.js 수정
 import path from "path";
 import HtmlWebpackPlugin from "html-webpack-plugin";
 import CopyWebpackPlugin from "copy-webpack-plugin";
@@ -11,11 +10,10 @@ export default {
   entry: "./app/index.js",
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "[name].[contenthash].js",
-    chunkFilename: "[name].[contenthash].js",
-    sourceMapFilename: "[file].map", // 소스 맵 파일 생성
+    filename: "[name].graphic-cast.js",
+    sourceMapFilename: "[file].map",
   },
-  devtool: "source-map", // 소스 맵 생성
+  devtool: "source-map",
   optimization: {
     splitChunks: {
       chunks: "all",
@@ -26,7 +24,6 @@ export default {
   },
   module: {
     rules: [
-      // Babel 설정 추가: ES6+ 코드를 ES5로 변환
       {
         test: /\.js$/,
         exclude: /node_modules/,
@@ -37,7 +34,9 @@ export default {
               [
                 "@babel/preset-env",
                 {
-                  targets: "> 0.25%, not dead", // 최근 사용되는 브라우저 대상으로 변환
+                  targets: { ie: "11" },
+                  useBuiltIns: "entry",
+                  corejs: 3,
                 },
               ],
             ],
@@ -62,7 +61,7 @@ export default {
       patterns: [{ from: "vendor", to: "vendor" }],
     }),
     new MiniCssExtractPlugin({
-      filename: "[name].[contenthash].css",
+      filename: "graphic-cast.css",
     }),
   ],
   performance: {
