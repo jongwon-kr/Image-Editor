@@ -6,15 +6,16 @@ import { processFiles } from "../utils/processFile.js";
 
 ("use strict");
 
-// 초기 이미지
-const defaultImages = [];
+// 로컬스토리지에서 기존 이미지 불러오기
+const storedImages = JSON.parse(localStorage.getItem("ImageFileList")) || [];
+const defaultImages = storedImages;
 
 function images() {
   const _self = this;
 
-  const ImageList = defaultImages;
+  const ImageFileList = defaultImages;
   if (Array.isArray(this.images) && this.images.length) {
-    ImageList.push(...this.images);
+    ImageFileList.push(...this.images);
   }
 
   const toolPanel = document.createElement("div");
@@ -36,9 +37,10 @@ function images() {
 
   const imageUpload = document.createElement("div");
   imageUpload.classList.add("drag-drop-input");
+  
   content.appendChild(imageUpload);
 
-  // 드래그 드롭 영역 클릭 시 파일 업로드 버튼 클릭
+  // 드래그 영역 클릭 시 파일 업로드 버튼 클릭
   const dragDropInput = toolPanel.querySelector(".drag-drop-input");
   dragDropInput.addEventListener("click", function () {
     console.log("click drag drop");
@@ -76,12 +78,15 @@ function images() {
 
         if (result.length > 0) {
           result.forEach((obj) => {
-            ImageList.push(obj);
+            ImageFileList.push(obj);
           });
+
+          // 로컬스토리지에 저장
+          localStorage.setItem("ImageFileList", JSON.stringify(ImageFileList));
         }
 
-        console.log("ImageList", ImageList);
-        console.log("files", files);
+        console.log("upload files result", ImageFileList);
+        updateImageGallery(); // 갤러리 업데이트
       } catch (error) {
         console.error("파일 처리 중 오류 발생:", error);
       }
@@ -92,18 +97,86 @@ function images() {
   imageGallery.classList.add("image-gallery");
   content.appendChild(imageGallery);
 
-  // 갤러리에 이미지 저장
-  ImageList.forEach((img, index) => {
-    const button = document.createElement("div");
-    button.classList.add("button");
-    button.dataset.index = index;
+  const paginationContainer = document.createElement("div");
+  paginationContainer.classList.add("pagination-container");
 
-    const imgElement = document.createElement("div");
-    imgElement.src = img.preview;
+  const prevButton = document.createElement("button");
+  prevButton.textContent = "이전";
+  prevButton.classList.add("prev-button");
+  prevButton.disabled = true;
+  paginationContainer.appendChild(prevButton);
 
-    button.appendChild(imgElement);
-    imageGallery.appendChild(button);
+  const pageIndicator = document.createElement("span");
+  pageIndicator.classList.add("page-indicator");
+  paginationContainer.appendChild(pageIndicator);
+
+  const nextButton = document.createElement("button");
+  nextButton.textContent = "다음";
+  nextButton.classList.add("next-button");
+  paginationContainer.appendChild(nextButton);
+
+  content.appendChild(paginationContainer);
+
+  const itemsPerPage = 12;
+  let currentPage = 1;
+
+  function updateImageGallery() {
+    imageGallery.innerHTML = "";
+
+    const sortedImages = [...ImageFileList].sort(
+      (a, b) => b.timestamp - a.timestamp
+    );
+
+    const totalPages = Math.ceil(sortedImages.length / itemsPerPage);
+    if (currentPage > totalPages) currentPage = totalPages || 1;
+
+    const start = (currentPage - 1) * itemsPerPage;
+    const paginatedImages = sortedImages.slice(start, start + itemsPerPage);
+
+    paginatedImages.forEach((img, index) => {
+      const button = document.createElement("div");
+      button.classList.add("image-wrapper");
+      button.dataset.index = index;
+
+      const imgElement = document.createElement("img");
+      imgElement.classList.add("gallery-image");
+      imgElement.src = img.preview;
+
+      button.appendChild(imgElement);
+      button.addEventListener("click", async function () {
+        if (!img.file) {
+          console.error("파일 정보가 없습니다.", img);
+          return;
+        }
+        console.log("img:", img);
+        await processFiles([img.file]);
+      });
+
+      imageGallery.appendChild(button);
+    });
+
+    pageIndicator.textContent = `${currentPage} / ${totalPages || 1}`;
+
+    prevButton.disabled = currentPage === 1;
+    nextButton.disabled = currentPage >= totalPages;
+  }
+
+  prevButton.addEventListener("click", () => {
+    if (currentPage > 1) {
+      currentPage--;
+      updateImageGallery();
+    }
   });
+
+  nextButton.addEventListener("click", () => {
+    const totalPages = Math.ceil(ImageFileList.length / itemsPerPage);
+    if (currentPage < totalPages) {
+      currentPage++;
+      updateImageGallery();
+    }
+  });
+
+  updateImageGallery();
 }
 
 export { images };

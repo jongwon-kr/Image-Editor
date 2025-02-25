@@ -394,6 +394,8 @@ function downloadImage(data, extension = "png", mimeType = "image/png") {
   const file = new Blob([byteArray], { type: mimeType + ";base64" });
   const fileURL = window.URL.createObjectURL(file);
 
+  console.log("file:", file);
+
   if (window.navigator && window.navigator.msSaveOrOpenBlob) {
     window.navigator.msSaveOrOpenBlob(file);
     return;
@@ -430,7 +432,7 @@ function applyTemplate(index, templates) {
   imgEditor.canvas.loadFromJSON(jsonData, () => {
     imgEditor.canvas.renderAll();
   });
-};
+}
 
 export {
   generateFabricGradientFromColorStops,

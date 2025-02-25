@@ -24,7 +24,7 @@ import { fullscreen } from "./utils/fullScreen.js";
  * @param {Array} images define upload images
  * @param {Array} templates define templates
  */
-export class ImageEditor {
+class ImageEditor {
   constructor(containerSelector, options) {
     const { dimensions, buttons, shapes, images, templates } = options;
     this.containerSelector = containerSelector;
@@ -362,3 +362,5 @@ export class ImageEditor {
     this.initializeNumberInput();
   }
 }
+
+export { ImageEditor };
