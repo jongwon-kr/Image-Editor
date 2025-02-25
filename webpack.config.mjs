@@ -10,7 +10,11 @@ export default {
   entry: "./app/index.js",
   output: {
     path: path.resolve(__dirname, "dist"),
+<<<<<<< HEAD
     filename: "[name].graphic-cast.js", // [name]을 추가해 청크별 고유 이름 생성
+=======
+    filename: "[name].graphic-cast.js",
+>>>>>>> 2186fd5464dace65e0f0439d8e1cda85c4cabeb5
     sourceMapFilename: "[file].map",
   },
   devtool: "source-map",
