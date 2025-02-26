@@ -422,18 +422,6 @@ function downloadSVG(SVGmarkup) {
   setTimeout(() => window.URL.revokeObjectURL(url), 60);
 }
 
-/**
- * Apply Selected Template
- * @param {Integer} index
- */
-function applyTemplate(index, templates) {
-  const template = templates[index];
-  const jsonData = JSON.parse(template.data);
-  imgEditor.canvas.loadFromJSON(jsonData, () => {
-    imgEditor.canvas.renderAll();
-  });
-}
-
 export {
   generateFabricGradientFromColorStops,
   getRealBBox,
@@ -444,5 +432,4 @@ export {
   setActiveFontStyle,
   downloadImage,
   downloadSVG,
-  applyTemplate,
 };

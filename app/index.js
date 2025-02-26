@@ -16,7 +16,6 @@ const buttons = [
   "path",
   "textbox",
   "images",
-  "upload",
   "background",
   "undo",
   "redo",

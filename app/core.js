@@ -3,7 +3,6 @@ import { lineDrawing } from "./drawing-tools/drawingLine.js";
 import { pathDrawing } from "./drawing-tools/drawingPath.js";
 import { textBoxDrawing } from "./drawing-tools/drawingText.js";
 import { tipPanel } from "./ui/tip.js";
-import { upload } from "./ui/upload.js";
 import { images } from "./ui/images.js";
 import { canvas } from "./ui/canvas.js";
 import { toolbar } from "./ui/toolbar.js";
@@ -132,9 +131,6 @@ class ImageEditor {
           o.evented = false;
         });
         break;
-      case "upload":
-        this.openDragDropPanel();
-        break;
       default:
         this.updateTip(
           "Tip: Shift를 누르고 각도 조절을 하면 15°씩 조절할 수 있습니다."
@@ -224,12 +220,8 @@ class ImageEditor {
     images.call(this);
   }
 
-  initializeUpload() {
-    upload.call(this, this.canvas);
-  }
-
   initializeCopyPaste() {
-    copyPaste(this.canvas);
+    copyPaste.call(this, this.canvas);
   }
 
   initializeToolbar() {
@@ -330,10 +322,6 @@ class ImageEditor {
       });
   }
 
-  openDragDropPanel() {
-    console.log("Drag and drop panel should be implemented in upload.js");
-  }
-
   init() {
     this.configUndoRedoStack();
     this.initializeToolbar();
@@ -342,13 +330,15 @@ class ImageEditor {
     this.initializeFreeDrawSettings();
     this.initializeCanvasSettings();
     this.initializeSelectionSettings();
+
     this.canvas = this.initializeCanvas();
+
+    this.initializeCopyPaste();
+
     this.initializeLineDrawing();
     this.initializePathDrawing();
     this.initializeTextBoxDrawing();
     this.initializeImages();
-    this.initializeUpload();
-    this.initializeCopyPaste();
     this.initializeTipSection();
     this.initializeZoom();
     try {
@@ -357,7 +347,6 @@ class ImageEditor {
       console.error("can't initialize templates", error);
     }
     this.initializeFullScreen();
-
     this.initializeHideShowToolPanel();
     this.initializeNumberInput();
   }

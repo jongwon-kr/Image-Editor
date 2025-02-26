@@ -37,7 +37,10 @@ function images() {
 
   const imageUpload = document.createElement("div");
   imageUpload.classList.add("drag-drop-input");
-  
+  const uploadInput = document.createElement("div");
+  uploadInput.textContent =
+    "드래그앤 드롭하거나 영역을 클릭하여 이미지를 추가할 수 있습니다.";
+  imageUpload.appendChild(uploadInput);
   content.appendChild(imageUpload);
 
   // 드래그 영역 클릭 시 파일 업로드 버튼 클릭
@@ -117,7 +120,7 @@ function images() {
 
   content.appendChild(paginationContainer);
 
-  const itemsPerPage = 12;
+  const itemsPerPage = 10;
   let currentPage = 1;
 
   function updateImageGallery() {
@@ -177,6 +180,16 @@ function images() {
   });
 
   updateImageGallery();
+
+  this.containerEl.append(
+    `<input id="btn-image-upload" type="file" accept="image/*" multiple hidden>`
+  );
+  document
+    .querySelector(`${this.containerSelector} #btn-image-upload`)
+    .addEventListener("change", function (e) {
+      if (e.target.files.length === 0) return;
+      processFiles(e.target.files);
+    });
 }
 
 export { images };

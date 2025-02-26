@@ -67,6 +67,26 @@ function canvas() {
       );
     }
 
+    document.addEventListener("keydown", (e) => {
+      if (e.ctrlKey && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        console.log("🖱 모든 객체 선택!");
+
+        const objects = fabricCanvas.getObjects();
+        const activeObjects = fabricCanvas.getActiveObjects();
+        if(objects.length == activeObjects.length)
+          return;
+        
+        if (objects.length > 0) {
+          const selection = new fabric.ActiveSelection(objects, {
+            canvas: fabricCanvas,
+          });
+          fabricCanvas.setActiveObject(selection);
+          fabricCanvas.requestRenderAll();
+        }
+      }
+    });
+
     // Move objects with arrow keys
     document.addEventListener("keydown", (e) => {
       const key = e.which || e.keyCode;

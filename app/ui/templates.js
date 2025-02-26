@@ -4,8 +4,6 @@
 
 "use strict";
 
-import { applyTemplate } from "../utils/utils.js";
-
 const defaultTemplates = [];
 
 function templates() {
@@ -56,7 +54,7 @@ function templates() {
     if (event.target.closest(".button")) {
       const index = event.target.closest(".button").dataset.index;
       try {
-        applyTemplate(index, TemplatesList);
+        applyTemplate(index, TemplatesList, _self.canvas);
       } catch (_) {
         console.error("Can't add template", _);
       }
@@ -67,39 +65,55 @@ function templates() {
   const button = document.createElement("button");
   button.innerHTML = "Add Template";
   button.onclick = function () {
-    // Capture the template name
     const templateName = prompt("Digite um nome para o novo template:");
     if (!templateName) {
       alert("Nome do template é obrigatório!");
       return;
     }
 
-    // Capture current canvas state as JSON
-    const canvasData = JSON.stringify(_self.canvas.toJSON());
-
-    // Add the new template to the list
-    const newTemplate = {
-      name: templateName,
-      preview: null, // Add a preview if necessary
-      data: canvasData,
+    const canvasObjects = _self.canvas.getObjects();
+    const canvasJsonData = _self.canvas.toJSON(["name"]);
+    // 필터링 시 유효한 객체만 포함
+    const filteredData = {
+      objects: canvasJsonData.objects.filter((obj) => {
+        const isValid = obj && typeof obj.type === "string";
+        if (!isValid) console.warn("Invalid object filtered out:", obj);
+        return isValid && (obj.type !== "image" || !obj.isBackground);
+      }),
     };
+    console.log("Filtered Data:", filteredData);
+    const canvasData = JSON.stringify(filteredData);
+
+    const originalBackgroundImage = _self.canvas.backgroundImage;
+    const originalBackgroundColor = _self.canvas.backgroundColor;
+
+    _self.canvas.setBackgroundImage(null, _self.canvas.renderAll.bind(_self.canvas));
+    _self.canvas.backgroundColor = "transparent";
+    _self.canvas.renderAll();
 
     const preview = _self.canvas.toDataURL({
       format: "png",
-      multiplier: 0.2, // Reduce resolution for a thumbnail
+      multiplier: 0.2,
     });
-    newTemplate.preview = preview;
+
+    _self.canvas.setBackgroundImage(originalBackgroundImage, _self.canvas.renderAll.bind(_self.canvas));
+    _self.canvas.backgroundColor = originalBackgroundColor;
+    _self.canvas.renderAll();
+
+    const newTemplate = {
+      name: templateName,
+      preview: preview,
+      data: canvasData,
+    };
+
     TemplatesList.push(newTemplate);
-    
     alert(`Template "${templateName}" salvo com sucesso!`);
 
-    // Dispatch an event after the new template is added
     const event = new CustomEvent("ImageEditor.newTemplate", {
       detail: newTemplate,
     });
     window.dispatchEvent(event);
 
-    // Clear the template list and re-render it
     templatesList.innerHTML = "";
     TemplatesList.forEach((img, index) => {
       const button = document.createElement("div");
@@ -115,6 +129,45 @@ function templates() {
   };
 
   content.appendChild(button);
+}
+
+/**
+ * Apply Selected Template
+ * @param {Integer} index
+ * @param {Array} templates
+ * @param {Canvas} canvas
+ */
+function applyTemplate(index, templates, canvas) {
+  const template = templates[index];
+  console.log("Template Data:", template);
+  const jsonData = JSON.parse(template.data);
+  console.log("JSON Data:", jsonData);
+
+  const newObjects = [];
+  fabric.util.enlivenObjects(
+    jsonData.objects,
+    (objects) => {
+      objects.forEach((obj) => {
+        canvas.add(obj);
+        newObjects.push(obj);
+      });
+
+      if (newObjects.length > 0) {
+        const group = new fabric.Group(newObjects, {
+          name: `template_${template.name}_${index}`,
+        });
+        newObjects.forEach((obj) => canvas.remove(obj));
+        canvas.add(group);
+        canvas.setActiveObject(group);
+      }
+
+      canvas.renderAll();
+    },
+    "fabric"
+  );
+
+  console.log("template", template);
+  console.log("canvas", canvas);
 }
 
 export { templates };
