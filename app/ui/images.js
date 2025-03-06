@@ -65,7 +65,7 @@ function images() {
     this.classList.remove("dragging");
   });
 
-  // 드롭 이벤트 처리
+  // drop 이벤트
   dragDropInput.addEventListener("drop", async function (event) {
     event.preventDefault();
     event.stopPropagation();
@@ -79,9 +79,9 @@ function images() {
 
         if (result.length > 0) {
           result.forEach((obj) => {
-            ImageFileList.push(obj);
+            ImageFileList.push(obj); // obj 전체를 추가
           });
-
+          console.log(ImageFileList);
           // 로컬스토리지에 저장
           localStorage.setItem("ImageFileList", JSON.stringify(ImageFileList));
         }
@@ -144,18 +144,34 @@ function images() {
 
       button.appendChild(imgElement);
       button.addEventListener("click", async function () {
-        if (!img.file) {
-          console.error("파일 정보가 없습니다.", img);
+        if (!img.file || !img.file.data) {
+          console.error("파일 데이터가 없습니다:", img);
           return;
         }
-        await processFiles([img.file]);
+
+        let blob;
+        if (
+          img.file.type === "image/svg+xml" &&
+          !img.file.data.startsWith("data:")
+        ) {
+          // SVG 텍스트를 Blob으로 변환
+          blob = new Blob([img.file.data], { type: "image/svg+xml" });
+        } else {
+          // Data URL인 경우 fetch로 Blob 변환
+          blob = await (await fetch(img.file.data)).blob();
+        }
+
+        const file = new File([blob], img.file.name, {
+          type: img.file.type,
+          lastModified: img.file.lastModified,
+        });
+        await processFiles([file]);
       });
 
       imageGallery.appendChild(button);
     });
 
     pageIndicator.textContent = `${currentPage} / ${totalPages || 1}`;
-
     prevButton.disabled = currentPage === 1;
     nextButton.disabled = currentPage >= totalPages;
   }
@@ -180,11 +196,29 @@ function images() {
   this.containerEl.append(
     `<input id="btn-image-upload" type="file" accept="image/*" multiple hidden>`
   );
+
+  // change 이벤트 수정
   document
     .querySelector(`${this.containerSelector} #btn-image-upload`)
-    .addEventListener("change", function (e) {
+    .addEventListener("change", async function (e) {
       if (e.target.files.length === 0) return;
-      processFiles(e.target.files);
+
+      try {
+        const result = await processFiles(e.target.files);
+
+        if (result.length > 0) {
+          result.forEach((obj) => {
+            ImageFileList.push(obj); // obj 전체를 추가
+          });
+          console.log(ImageFileList);
+          // 로컬스토리지에 저장
+          localStorage.setItem("ImageFileList", JSON.stringify(ImageFileList));
+        }
+
+        updateImageGallery(); // 갤러리 업데이트
+      } catch (error) {
+        console.error("파일 업로드 중 오류 발생:", error);
+      }
     });
 }
 

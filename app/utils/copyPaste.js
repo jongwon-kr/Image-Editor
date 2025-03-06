@@ -89,85 +89,68 @@ function copyPaste(canvas) {
         const clipboardItems = await navigator.clipboard.read();
         for (const item of clipboardItems) {
           // 이미지 데이터가 있는 경우
-          if (item.types.includes("image/png") || item.types.includes("image/jpeg")) {
+          if (
+            item.types.includes("image/png") ||
+            item.types.includes("image/jpeg")
+          ) {
             const blob = await item.getType(item.types[0]);
             const reader = new FileReader();
             reader.onload = (event) => {
-              fabric.Image.fromURL(event.target.result, (img) => {
-                img.set({
-                  left: 0,
-                  top: 0,
-                  crossOrigin: "anonymous",
-                });
-                img.scaleToHeight(100);
-                img.scaleToWidth(100);
-                canvas.add(img);
-                canvas.setActiveObject(img);
-                canvas.fire("object:modified");
-                canvas.renderAll();
-              }, {
-                crossorigin: "anonymous",
-              });
+              fabric.Image.fromURL(
+                event.target.result,
+                (img) => {
+                  img.set({
+                    left: 0,
+                    top: 0,
+                    crossOrigin: "anonymous",
+                  });
+                  img.scaleToHeight(100);
+                  img.scaleToWidth(100);
+                  canvas.add(img);
+                  canvas.setActiveObject(img);
+                  canvas.fire("object:modified");
+                  canvas.renderAll();
+                },
+                {
+                  crossorigin: "anonymous",
+                }
+              );
             };
             reader.readAsDataURL(blob);
             return;
           }
         }
 
-        // 클립보드에 이미지 없으면 텍스트 데이터 확인
-        const textData = await navigator.clipboard.readText();
-        if (textData) {
-          if (isBase64String(textData)) {
-            fabric.Image.fromURL(textData, (img) => {
-              img.set({
-                left: 0,
-                top: 0,
-                crossOrigin: "anonymous",
-              });
-              img.scaleToHeight(100);
-              img.scaleToWidth(100);
-              canvas.add(img);
-              canvas.setActiveObject(img);
-              canvas.fire("object:modified");
-              canvas.renderAll();
-            }, {
-              crossorigin: "anonymous",
-            });
-            return;
-          }
+        let clonedObjects = [];
+        let activeObjects = this.canvas.getActiveObjects();
 
-          if (isJSONObjectString(textData)) {
-            const obj = JSON.parse(textData);
-            const validTypes = [
-              "rect",
-              "circle",
-              "line",
-              "path",
-              "polygon",
-              "polyline",
-              "textbox",
-              "group",
-            ];
-            if (!validTypes.includes(obj.type)) {
-              return;
+        activeObjects.forEach((obj) => {
+          obj.clone((clone) => {
+            this.canvas.add(
+              clone.set({
+                strokeUniform: true,
+                left: obj.aCoords.tl.x + 20,
+                top: obj.aCoords.tl.y + 20,
+              })
+            );
+
+            if (activeObjects.length === 1) {
+              this.canvas.setActiveObject(clone);
             }
+            clonedObjects.push(clone);
+          });
+        });
 
-            fabric.util.enlivenObjects([obj], (objects) => {
-              objects.forEach((o) => {
-                o.set({
-                  left: 0,
-                  top: 0,
-                });
-                canvas.add(o);
-                o.setCoords();
-                canvas.setActiveObject(o);
-              });
-              canvas.renderAll();
-              canvas.fire("object:modified");
-            });
-            return;
-          }
+        if (clonedObjects.length > 1) {
+          let sel = new fabric.ActiveSelection(clonedObjects, {
+            canvas: this.canvas,
+          });
+          this.canvas.setActiveObject(sel);
         }
+
+        this.canvas.requestRenderAll();
+        this.canvas.trigger("object:modified");
+
       } catch (err) {
         console.error("클립보드 접근 실패:", err);
         console.log("HTTPS 환경에서만 클립보드 API가 동작합니다.");

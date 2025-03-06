@@ -1,3 +1,5 @@
+import { resizeImg } from "../utils/resizeImg.js";
+
 /**
  * Define action to add templates to canvas
  */
@@ -13,7 +15,7 @@ function templates() {
   if (Array.isArray(this.templates) && this.templates.length)
     TemplatesList.push(...this.templates);
 
-  // Create template panel and append it to the container
+  // tool panel
   const toolPanel = document.createElement("div");
   toolPanel.classList.add("toolpanel");
   toolPanel.id = "templates-panel";
@@ -31,28 +33,20 @@ function templates() {
     .querySelector(`${this.containerSelector} .main-panel`)
     .appendChild(toolPanel);
 
-  // Create list of templates
+  const templateManager = document.createElement("div");
+  templateManager.classList.add("template-manager");
+  content.appendChild(templateManager);
+
+  // 템플릿 리스트
   const templatesList = document.createElement("div");
   templatesList.classList.add("list-templates");
-  content.appendChild(templatesList);
+  templateManager.appendChild(templatesList);
 
-  // Append templates to the list
-  TemplatesList.forEach((img, index) => {
-    const button = document.createElement("div");
-    button.classList.add("button");
-    button.dataset.index = index;
-
-    const imgElement = document.createElement("img");
-    imgElement.src = img.preview;
-
-    button.appendChild(imgElement);
-    templatesList.appendChild(button);
-  });
-
-  // Handle click on template button
+  // 템플릿 리스트 클릭 이벤트
   templatesList.addEventListener("click", function (event) {
-    if (event.target.closest(".button")) {
-      const index = event.target.closest(".button").dataset.index;
+    console.log("리스트 클릭");
+    if (event.target.closest(".template-button")) {
+      const index = event.target.closest(".template-button").dataset.index;
       try {
         applyTemplate(index, TemplatesList, _self.canvas);
       } catch (_) {
@@ -61,8 +55,11 @@ function templates() {
     }
   });
 
-  // Create and handle "Add Template" button
+  updateTemplates(TemplatesList, templatesList);
+
+  // 템플릿 추가 버튼
   const button = document.createElement("button");
+  button.classList.add("template-add-button");
   button.innerHTML = "템플릿 추가";
   button.onclick = function () {
     const templateName = prompt("저장할 템플릿 이름을 입력해주세요:");
@@ -86,16 +83,30 @@ function templates() {
     const originalBackgroundImage = _self.canvas.backgroundImage;
     const originalBackgroundColor = _self.canvas.backgroundColor;
 
-    _self.canvas.setBackgroundImage(null, _self.canvas.renderAll.bind(_self.canvas));
+    _self.canvas.setBackgroundImage(
+      null,
+      _self.canvas.renderAll.bind(_self.canvas)
+    );
     _self.canvas.backgroundColor = "transparent";
     _self.canvas.renderAll();
 
-    const preview = _self.canvas.toDataURL({
+    // 저장될 템플릿 사이즈 임의로 설정
+    const templateDimension = {
+      width: 1280,
+      height: 720,
+    };
+    const templateCanvas = _self.canvas;
+    templateCanvas.setDimensions(templateDimension);
+
+    const preview = templateCanvas.toDataURL({
       format: "png",
       multiplier: 0.2,
     });
 
-    _self.canvas.setBackgroundImage(originalBackgroundImage, _self.canvas.renderAll.bind(_self.canvas));
+    _self.canvas.setBackgroundImage(
+      originalBackgroundImage,
+      _self.canvas.renderAll.bind(_self.canvas)
+    );
     _self.canvas.backgroundColor = originalBackgroundColor;
     _self.canvas.renderAll();
 
@@ -114,24 +125,14 @@ function templates() {
     window.dispatchEvent(event);
 
     templatesList.innerHTML = "";
-    TemplatesList.forEach((img, index) => {
-      const button = document.createElement("div");
-      button.classList.add("button");
-      button.dataset.index = index;
-
-      const imgElement = document.createElement("img");
-      imgElement.src = img.preview;
-
-      button.appendChild(imgElement);
-      templatesList.appendChild(button);
-    });
+    updateTemplates(TemplatesList, templatesList);
   };
 
-  content.appendChild(button);
+  templateManager.appendChild(button);
 }
 
 /**
- * Apply Selected Template
+ * 선택한 템플릿 캔버스에 추가
  * @param {Integer} index
  * @param {Array} templates
  * @param {Canvas} canvas
@@ -162,6 +163,45 @@ function applyTemplate(index, templates, canvas) {
     },
     "fabric"
   );
+}
+
+// 템플릿 리스트 업데이트
+function updateTemplates(templates, templatesList) {
+  templates.forEach((template, index) => {
+    // 템플릿 형식
+    const templateForm = document.createElement("div");
+
+    // Header(제목, 삭제버튼)
+    const templateHeader = document.createElement("div");
+    templateHeader.classList.add("template-header");
+
+    // 템플릿 제목
+    const templateTitle = document.createElement("p");
+    templateTitle.classList.add("template-title");
+    templateTitle.textContent = template.name;
+    templateHeader.appendChild(templateTitle);
+
+    // 삭제 버튼
+    const removeButton = document.createElement("button");
+    removeButton.classList.add("template-remove-button");
+    removeButton.innerHTML = "삭제";
+    templateHeader.appendChild(removeButton);
+    templateForm.appendChild(templateHeader);
+
+    // 템플릿 추가 버튼 => 이미지(preview) 영역
+    const button = document.createElement("div");
+    button.classList.add("template-button");
+    button.dataset.index = index;
+
+    const imgElement = document.createElement("img");
+    resizeImg(template.preview, 239, function (resizedImageUrl) {
+      imgElement.src = resizedImageUrl;
+    });
+
+    button.appendChild(imgElement);
+    templateForm.appendChild(button);
+    templatesList.appendChild(templateForm);
+  });
 }
 
 export { templates };

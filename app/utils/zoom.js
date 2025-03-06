@@ -20,7 +20,7 @@ function zoom() {
       <div id="zoom-value">${Math.round(currentZoomLevel * 100)}%</div>
     `;
     footerbar.appendChild(zoomContainer);
-  }else {
+  } else {
     console.log("footerbar is null");
   }
 
@@ -72,6 +72,10 @@ function zoom() {
       2
     );
     imgEditor.applyZoom(clampedZoom);
+  };
+
+  imgEditor.fitZoom1 = () => {
+    imgEditor.applyZoom(1);
   };
 
   document.addEventListener("keydown", (e) => {

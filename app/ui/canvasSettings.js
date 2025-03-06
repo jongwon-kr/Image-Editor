@@ -1,15 +1,19 @@
+import { resizeImg } from "../utils/resizeImg.js";
 import { generateFabricGradientFromColorStops } from "../utils/utils.js";
-
 /**
  * Initialize canvas setting panel
  */
-"use strict";
+("use strict");
 
 /**
  * Initialize canvas settings for a Fabric.js canvas
  */
 function canvasSettings() {
   const _self = this;
+
+  let width = 1280;
+  let height = 720;
+
   const mainPanel = document.querySelector(
     `${this.containerSelector} .main-panel`
   );
@@ -32,7 +36,7 @@ function canvasSettings() {
             <label>너비</label>
             <div class="custom-number-input">
               <button class="decrease">-</button>
-              <input type="number" min="100" id="input-width" value="640"/>
+              <input type="number" min="100" id="input-width" value="${width}"/>
               <button class="increase">+</button>
             </div>
           </div>
@@ -40,7 +44,7 @@ function canvasSettings() {
             <label>높이</label>
             <div class="custom-number-input">
               <button class="decrease">-</button>
-              <input type="number" min="100" id="input-height" value="480"/>
+              <input type="number" min="100" id="input-height" value="${height}"/>
               <button class="increase">+</button>
             </div>
           </div>
@@ -122,6 +126,18 @@ function canvasSettings() {
               </div>
             </div>
           </div>
+          <div>
+            <p>배경화면 설정</p>
+            <div id="set-canvas-background-image">
+              <input type="file" id="fileInput" accept="image/*" style="display:none;">
+              <span>미리보기</span>
+              <img id="background-img" src="123">
+              <div>
+                <button id="select-background-img-btn">배경화면 선택</button>
+                <button id="set-background-img-btn">배경화면 적용</button>
+              </div>
+            </div>
+          </div>
         </div>
       `
     );
@@ -173,7 +189,7 @@ function canvasSettings() {
         });
       });
 
-    // fire initial tab
+    // Fire initial tab
     const colorFillTab = document.querySelector(
       `${this.containerSelector} .toolpanel#background-panel .content .tab-label[data-value="color-fill"]`
     );
@@ -285,6 +301,71 @@ function canvasSettings() {
           updateGradientFill();
         });
       });
+
+    const fileInput = document.querySelector("#fileInput");
+    const selectBackgroundImageBtn = document.querySelector(
+      "#select-background-img-btn"
+    );
+
+    let imageBase64 = "";
+
+    selectBackgroundImageBtn.addEventListener("click", function () {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener("change", function (event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        imageBase64 = e.target.result;
+        resizeImg(imageBase64, 240, function (resizedImageUrl) {
+          backgroundImage.src = resizedImageUrl;
+        });
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+    const setBackgroundImageBtn = document.querySelector(
+      "#set-background-img-btn"
+    );
+    const backgroundImage = document.querySelector("#background-img");
+
+    setBackgroundImageBtn.addEventListener("click", function () {
+      if (!imageBase64) {
+        alert("이미지를 선택하세요");
+        return;
+      }
+
+      fabric.Image.fromURL(imageBase64, function (img) {
+        // 이미지의 원본 크기를 캔버스 크기로 설정
+        const imgWidth = img.width;
+        const imgHeight = img.height;
+
+        width = imgWidth;
+        height = imgHeight;
+
+        // 캔버스 크기 업데이트
+        _self.canvas.originalW = width;
+        _self.canvas.originalH = height;
+
+        // 입력 필드 값도 업데이트
+        document.querySelector(
+          `${_self.containerSelector} .toolpanel#background-panel .content #input-width`
+        ).value = imgWidth;
+        document.querySelector(
+          `${_self.containerSelector} .toolpanel#background-panel .content #input-height`
+        ).value = imgHeight;
+
+        // 배경 이미지 설정 (스케일링 제거)
+        _self.canvas.setBackgroundImage(img);
+        if (typeof _self.fitZoom === "function") _self.fitZoom1();
+        // 아래 fitZoom을 선택하면 화면의 크기에 맞게 자동 조절됨
+        // if (typeof _self.fitZoom === "function") _self.fitZoom();
+      });
+    });
   };
 
   // Initialize both sections

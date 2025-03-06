@@ -323,6 +323,122 @@ function selectionSettings() {
   })();
   // end font section
 
+  // // size section
+  // (() => {
+  //   const selectPanelContent = document.querySelector(
+  //     `${this.containerSelector} .toolpanel#select-panel .content`
+  //   );
+  //   selectPanelContent.insertAdjacentHTML(
+  //     "beforeend",
+  //     `
+  //     <div class="size-section">
+  //       <h4>크기</h4>
+  //       <div class="input-container">
+  //         <label>너비</label>
+  //         <div class="custom-number-input">
+  //           <button class="decrease">-</button>
+  //           <input type="number" min="1" value="100" id="input-width">
+  //           <button class="increase">+</button>
+  //         </div>
+  //       </div>
+  //       <div class="input-container">
+  //         <label>높이</label>
+  //         <div class="custom-number-input">
+  //           <button class="decrease">-</button>
+  //           <input type="number" min="1" value="100" id="input-height">
+  //           <button class="increase">+</button>
+  //         </div>
+  //       </div>
+  //       <div class="input-container">
+  //         <label>비율 고정</label>
+  //         <input type="checkbox" id="lock-ratio" checked>
+  //       </div>
+  //       <hr>
+  //     </div>
+  //   `
+  //   );
+
+  //   const widthInput = document.querySelector(
+  //     `${this.containerSelector} .toolpanel#select-panel .size-section #input-width`
+  //   );
+  //   const heightInput = document.querySelector(
+  //     `${this.containerSelector} .toolpanel#select-panel .size-section #input-height`
+  //   );
+  //   const lockRatioCheckbox = document.querySelector(
+  //     `${this.containerSelector} .toolpanel#select-panel .size-section #lock-ratio`
+  //   );
+
+  //   let originalWidth =
+  //     this.activeSelection.width * this.activeSelection.scaleX;
+  //   let originalHeight =
+  //     this.activeSelection.height * this.activeSelection.scaleY;
+  //   let aspectRatio = originalWidth / originalHeight;
+
+  //   // Update size display when selection changes
+  //   if (this.activeSelection) {
+  //     widthInput.value = Math.round(originalWidth);
+  //     heightInput.value = Math.round(originalHeight);
+  //   }
+
+  //   // Width change handler
+  //   widthInput.addEventListener("change", function () {
+  //     let newWidth = parseFloat(this.value);
+  //     let scaleX = newWidth / this.activeSelection.width;
+
+  //     if (lockRatioCheckbox.checked) {
+  //       let newHeight = newWidth / aspectRatio;
+  //       this.activeSelection.scaleToWidth(newWidth);
+  //       this.activeSelection.scaleToHeight(newHeight);
+  //       heightInput.value = Math.round(newHeight);
+  //     } else {
+  //       this.activeSelection.scaleX = scaleX;
+  //     }
+
+  //     _self.canvas.renderAll();
+  //     _self.canvas.trigger("object:modified");
+  //   });
+
+  //   // Height change handler
+  //   heightInput.addEventListener("change", function () {
+  //     let newHeight = parseFloat(this.value);
+  //     let scaleY = newHeight / this.activeSelection.height;
+
+  //     if (lockRatioCheckbox.checked) {
+  //       let newWidth = newHeight * aspectRatio;
+  //       this.activeSelection.scaleToWidth(newWidth);
+  //       this.activeSelection.scaleToHeight(newHeight);
+  //       widthInput.value = Math.round(newWidth);
+  //     } else {
+  //       this.activeSelection.scaleY = scaleY;
+  //     }
+
+  //     _self.canvas.renderAll();
+  //     _self.canvas.trigger("object:modified");
+  //   });
+
+  //   // Increase/Decrease buttons
+  //   const sizeButtons = document.querySelectorAll(
+  //     `${this.containerSelector} .toolpanel#select-panel .size-section .custom-number-input button`
+  //   );
+  //   sizeButtons.forEach((button) => {
+  //     button.addEventListener("click", function () {
+  //       const input = this.parentElement.querySelector("input");
+  //       let value = parseFloat(input.value);
+  //       const step = 10; // Adjust step value as needed
+
+  //       if (this.classList.contains("increase")) {
+  //         value += step;
+  //       } else if (this.classList.contains("decrease") && value > step) {
+  //         value -= step;
+  //       }
+
+  //       input.value = Math.round(value);
+  //       input.dispatchEvent(new Event("change"));
+  //     });
+  //   });
+  // })();
+  // // end size section
+
   // border section
   (() => {
     const selectPanelContent = document.querySelector(

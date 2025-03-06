@@ -24,14 +24,20 @@ function canvas() {
 
     fabricCanvas.originalW = fabricCanvas.width;
     fabricCanvas.originalH = fabricCanvas.height;
+    fabricCanvas.backgroundColor = "#ffffff";
+
+    fabricCanvas.selectionColor = "rgba(0, 120, 215, 0.2)";
+    fabricCanvas.selectionBorderColor = "rgba(0, 120, 215, 0.8)";
+    fabricCanvas.selectionLineWidth = 1.2;
 
     // Set up selection style
-    fabric.Object.prototype.transparentCorners = false;
-    fabric.Object.prototype.cornerStyle = "circle";
-    fabric.Object.prototype.borderColor = "#C00000";
-    fabric.Object.prototype.cornerColor = "#C00000";
-    fabric.Object.prototype.cornerStrokeColor = "#FFF";
-    fabric.Object.prototype.padding = 0;
+    fabric.Object.prototype.set({
+      transparentCorners: false,
+      cornerStyle: "circle",
+      borderColor: "rgba(0, 120, 215, 0.3)",
+      cornerColor: "rgba(0, 120, 215, 0.8)",
+      cornerStrokeColor: "#ffffff",
+    });
 
     // Selection events
     fabricCanvas.on("selection:created", (e) =>
@@ -73,13 +79,13 @@ function canvas() {
 
         const objects = fabricCanvas.getObjects();
         const activeObjects = fabricCanvas.getActiveObjects();
-        if(objects.length == activeObjects.length)
-          return;
-        
+        if (objects.length == activeObjects.length) return;
+
         if (objects.length > 0) {
-          const selection = new fabric.ActiveSelection(objects, {
-            canvas: fabricCanvas,
-          });
+          objects.forEach((obj)=>{
+            fabricCanvas.setActiveObject(obj);
+          })
+          const selection = new fabric.ActiveSelection(objects);
           fabricCanvas.setActiveObject(selection);
           fabricCanvas.requestRenderAll();
         }
