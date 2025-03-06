@@ -1,4 +1,4 @@
-import { load } from "../utils/saveInBrowser.js";
+import { save, load } from "../utils/saveInBrowser.js";
 /**
  * Canvas section management of image editor
  */
@@ -48,13 +48,111 @@ function canvas() {
     );
     fabricCanvas.on("selection:cleared", () => this.setActiveSelection(null));
 
+    // Guide lines array to manage them
+    let guideLines = [];
+    let isSnapping = false;
+
     // Snap to angle on rotate with Shift key
     fabricCanvas.on("object:rotating", (e) => {
+      isSnapping = true;
       if (e.e.shiftKey) {
         e.target.snapAngle = 15;
       } else {
         e.target.snapAngle = false;
       }
+      isSnapping = false;
+    });
+
+    // Function to remove all guide lines
+    const removeGuideLines = () => {
+      guideLines.forEach((line) => fabricCanvas.remove(line));
+      guideLines = [];
+      fabricCanvas.renderAll();
+    };
+
+    // Function to add a guide line
+    const addGuideLine = (x1, y1, x2, y2) => {
+      const line = new fabric.Line([x1, y1, x2, y2], {
+        stroke: "rgba(0, 120, 215, 0.8)",
+        strokeWidth: 1,
+        strokeDashArray: [5, 5], // Dashed line
+        selectable: false,
+        evented: false,
+        excludeFromExport: true,
+      });
+      fabricCanvas.add(line);
+      guideLines.push(line);
+    };
+
+    // Snap to center and edges while moving
+    fabricCanvas.on("object:moving", (e) => {
+      if (isSnapping) return;
+
+      const obj = e.target;
+      const canvasWidth = fabricCanvas.originalW;
+      const canvasHeight = fabricCanvas.originalH;
+      const snapThreshold = 5; // 20px snapping threshold
+
+      // Remove existing guide lines before recalculating
+      removeGuideLines();
+
+      // Get object bounds
+      const objWidth = obj.getScaledWidth();
+      const objHeight = obj.getScaledHeight();
+      const objLeft = obj.left;
+      const objTop = obj.top;
+      const objCenterX = objLeft + objWidth / 2;
+      const objCenterY = objTop + objHeight / 2;
+
+      // Canvas center points
+      const canvasCenterX = canvasWidth / 2;
+      const canvasCenterY = canvasHeight / 2;
+
+      // Snap to horizontal center
+      if (Math.abs(objCenterX - canvasCenterX) < snapThreshold) {
+        obj.set({
+          left: canvasCenterX - objWidth / 2,
+        });
+        addGuideLine(canvasCenterX, 0, canvasCenterX, canvasHeight); // Vertical guide line
+      }
+
+      // Snap to vertical center
+      if (Math.abs(objCenterY - canvasCenterY) < snapThreshold) {
+        obj.set({
+          top: canvasCenterY - objHeight / 2,
+        });
+        addGuideLine(0, canvasCenterY, canvasWidth, canvasCenterY); // Horizontal guide line
+      }
+
+      // Snap to edges
+      // Left edge
+      if (Math.abs(objLeft) < snapThreshold) {
+        obj.set({ left: 0 });
+        addGuideLine(0, 0, 0, canvasHeight); // Left vertical guide
+      }
+      // Right edge
+      if (Math.abs(objLeft + objWidth - canvasWidth) < snapThreshold) {
+        obj.set({ left: canvasWidth - objWidth });
+        addGuideLine(canvasWidth - 1, 0, canvasWidth - 1, canvasHeight); // Right vertical guide
+      }
+      // Top edge
+      if (Math.abs(objTop) < snapThreshold) {
+        obj.set({ top: 0 });
+        addGuideLine(0, 0, canvasWidth, 0); // Top horizontal guide
+      }
+      // Bottom edge
+      if (Math.abs(objTop + objHeight - canvasHeight) < snapThreshold) {
+        obj.set({ top: canvasHeight - objHeight });
+        addGuideLine(0, canvasHeight - 1, canvasWidth, canvasHeight - 1); // Bottom horizontal guide
+      }
+
+      obj.setCoords(); // Update object coordinates
+      fabricCanvas.renderAll();
+    });
+
+    // Clear guide lines when movement stops
+    fabricCanvas.on("mouse:up", () => {
+      removeGuideLines();
     });
 
     // Track modifications for undo/redo
@@ -65,7 +163,7 @@ function canvas() {
     });
 
     // Load saved canvas state if available
-    const savedCanvas = load("canvasEditor"); // Placeholder: assumes saveInBrowser is defined elsewhere
+    const savedCanvas = load("canvasEditor");
     if (savedCanvas) {
       fabricCanvas.loadFromJSON(
         savedCanvas,
@@ -82,13 +180,39 @@ function canvas() {
         if (objects.length == activeObjects.length) return;
 
         if (objects.length > 0) {
-          objects.forEach((obj)=>{
+          objects.forEach((obj) => {
             fabricCanvas.setActiveObject(obj);
-          })
-          const selection = new fabric.ActiveSelection(objects);
+          });
+          const selection = new fabric.ActiveSelection(objects, {
+            canvas: fabricCanvas,
+          });
           fabricCanvas.setActiveObject(selection);
           fabricCanvas.requestRenderAll();
         }
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.ctrlKey && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        save("canvasEditor", fabricCanvas.toJSON());
+
+        const saveMessage = document.createElement("div");
+        saveMessage.textContent = "저장되었습니다";
+        saveMessage.className = "message";
+
+        document.body.appendChild(saveMessage);
+
+        setTimeout(() => {
+          saveMessage.style.opacity = "1";
+        }, 10);
+
+        setTimeout(() => {
+          saveMessage.style.opacity = "0";
+          setTimeout(() => {
+            saveMessage.remove();
+          }, 300);
+        }, 600);
       }
     });
 

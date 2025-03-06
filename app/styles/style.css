@@ -196,6 +196,11 @@ body {
   font-size: 13px;
 }
 
+#select-panel .content {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 #select-panel .text-section .style button,
 #select-panel .alignment-section button,
 #select-panel .object-options button {
@@ -228,8 +233,15 @@ body {
 }
 
 .toolpanel#select-panel .text-section,
-.toolpanel#select-panel .effect-section {
+.toolpanel#select-panel .effect-section,
+.toolpanel#select-panel .size-section {
   display: none;
+}
+
+.toolpanel#select-panel.type-image .size-section,
+.toolpanel#select-panel.type-polygon .size-section,
+.toolpanel#select-panel.type-activeSelection .size-section {
+  display: block;
 }
 
 .toolpanel#select-panel.type-group .border-section {
@@ -628,12 +640,10 @@ input#input-zoom-level {
 
 .list-templates {
   flex: 1;
-  display: grid;
   overflow-y: auto;
   width: 100%;
   padding: 0 20 0 20;
   max-height: 100%;
-  gap: 5px;
 }
 
 .template-header {
@@ -718,4 +728,20 @@ input#input-zoom-level {
 }
 
 #set-background-img-btn {
+}
+
+.message {
+  position: fixed;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 128, 215, 0.7);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  z-index: 1000;
+  font-size: 16px;
+  font-family: "HY헤드라인", sans-serif;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
 }

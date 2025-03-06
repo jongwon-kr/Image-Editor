@@ -12,6 +12,16 @@ import {
  */
 
 ("use strict");
+
+const sizeStyleList = [
+  { value: 50, label: "작음 (50)" },
+  { value: 100, label: "기본 (100)" },
+  { value: 150, label: "중간 (150)" },
+  { value: 200, label: "큼 (200)" },
+  { value: 300, label: "매우 큼 (300)" },
+  { value: 400, label: "최대 (400)" },
+];
+
 const BorderStyleList = [
   {
     value: {
@@ -323,121 +333,161 @@ function selectionSettings() {
   })();
   // end font section
 
-  // // size section
-  // (() => {
-  //   const selectPanelContent = document.querySelector(
-  //     `${this.containerSelector} .toolpanel#select-panel .content`
-  //   );
-  //   selectPanelContent.insertAdjacentHTML(
-  //     "beforeend",
-  //     `
-  //     <div class="size-section">
-  //       <h4>크기</h4>
-  //       <div class="input-container">
-  //         <label>너비</label>
-  //         <div class="custom-number-input">
-  //           <button class="decrease">-</button>
-  //           <input type="number" min="1" value="100" id="input-width">
-  //           <button class="increase">+</button>
-  //         </div>
-  //       </div>
-  //       <div class="input-container">
-  //         <label>높이</label>
-  //         <div class="custom-number-input">
-  //           <button class="decrease">-</button>
-  //           <input type="number" min="1" value="100" id="input-height">
-  //           <button class="increase">+</button>
-  //         </div>
-  //       </div>
-  //       <div class="input-container">
-  //         <label>비율 고정</label>
-  //         <input type="checkbox" id="lock-ratio" checked>
-  //       </div>
-  //       <hr>
-  //     </div>
-  //   `
-  //   );
+  // size section
+  (() => {
+    const selectPanelContent = document.querySelector(
+      `${this.containerSelector} .toolpanel#select-panel .content`
+    );
+    if (!selectPanelContent) {
+      console.error(
+        "selectPanelContent not found. Check containerSelector:",
+        this.containerSelector
+      );
+      return;
+    }
 
-  //   const widthInput = document.querySelector(
-  //     `${this.containerSelector} .toolpanel#select-panel .size-section #input-width`
-  //   );
-  //   const heightInput = document.querySelector(
-  //     `${this.containerSelector} .toolpanel#select-panel .size-section #input-height`
-  //   );
-  //   const lockRatioCheckbox = document.querySelector(
-  //     `${this.containerSelector} .toolpanel#select-panel .size-section #lock-ratio`
-  //   );
+    // HTML 삽입
+    selectPanelContent.insertAdjacentHTML(
+      "beforeend",
+      `
+      <div class="size-section">
+        <h4>크기</h4>
+        <div class="input-container">
+          <label for="input-size-style">크기 선택</label>
+          <select id="input-size-style">
+            ${sizeStyleList
+              .map(
+                (item) =>
+                  `<option value='${JSON.stringify(item.value)}'>${
+                    item.label
+                  }</option>`
+              )
+              .join("")}
+          </select>
+        </div>
+        <hr>
+      </div>
+    `
+    );
 
-  //   let originalWidth =
-  //     this.activeSelection.width * this.activeSelection.scaleX;
-  //   let originalHeight =
-  //     this.activeSelection.height * this.activeSelection.scaleY;
-  //   let aspectRatio = originalWidth / originalHeight;
+    const sizeInput = document.querySelector(
+      `${this.containerSelector} .toolpanel#select-panel .size-section #input-size-style`
+    );
+    if (!sizeInput) {
+      console.error("sizeInput not found");
+      return;
+    }
 
-  //   // Update size display when selection changes
-  //   if (this.activeSelection) {
-  //     widthInput.value = Math.round(originalWidth);
-  //     heightInput.value = Math.round(originalHeight);
-  //   }
+    console.log("sizeInput initialized:", sizeInput);
 
-  //   // Width change handler
-  //   widthInput.addEventListener("change", function () {
-  //     let newWidth = parseFloat(this.value);
-  //     let scaleX = newWidth / this.activeSelection.width;
+    if (!_self.canvas) {
+      console.error("Canvas is not initialized in _self:", _self);
+      sizeInput.disabled = true;
+      return;
+    }
 
-  //     if (lockRatioCheckbox.checked) {
-  //       let newHeight = newWidth / aspectRatio;
-  //       this.activeSelection.scaleToWidth(newWidth);
-  //       this.activeSelection.scaleToHeight(newHeight);
-  //       heightInput.value = Math.round(newHeight);
-  //     } else {
-  //       this.activeSelection.scaleX = scaleX;
-  //     }
+    // 크기 변경 및 셀렉션 재설정 함수
+    const updateObjectSizes = (newWidth) => {
+      const originActiveObjects = _self.canvas.getActiveObjects();
+      const activeObjects = _self.canvas
+        .getActiveObjects()
+        .filter(
+          (obj) =>
+            obj.type !== "textbox" &&
+            obj.type !== "group" &&
+            obj.type !== "path" &&
+            obj.type !== "line"
+        );
 
-  //     _self.canvas.renderAll();
-  //     _self.canvas.trigger("object:modified");
-  //   });
+      console.log("activeObjects:", activeObjects);
 
-  //   // Height change handler
-  //   heightInput.addEventListener("change", function () {
-  //     let newHeight = parseFloat(this.value);
-  //     let scaleY = newHeight / this.activeSelection.height;
+      if (activeObjects.length === 0) {
+        console.log(
+          "No valid objects to resize (textbox, group, freedrawing, drawingline, drawingpath excluded)"
+        );
+        return;
+      }
 
-  //     if (lockRatioCheckbox.checked) {
-  //       let newWidth = newHeight * aspectRatio;
-  //       this.activeSelection.scaleToWidth(newWidth);
-  //       this.activeSelection.scaleToHeight(newHeight);
-  //       widthInput.value = Math.round(newWidth);
-  //     } else {
-  //       this.activeSelection.scaleY = scaleY;
-  //     }
+      activeObjects.forEach((obj) => {
+        const currentWidth = obj.width * obj.scaleX;
+        const currentHeight = obj.height * obj.scaleY;
+        const currentAspectRatio = currentWidth / currentHeight;
+        const newHeight = newWidth / currentAspectRatio;
 
-  //     _self.canvas.renderAll();
-  //     _self.canvas.trigger("object:modified");
-  //   });
+        console.log(
+          "Resizing:",
+          obj.type,
+          "from",
+          currentWidth,
+          "x",
+          currentHeight,
+          "to",
+          newWidth,
+          "x",
+          newHeight
+        );
 
-  //   // Increase/Decrease buttons
-  //   const sizeButtons = document.querySelectorAll(
-  //     `${this.containerSelector} .toolpanel#select-panel .size-section .custom-number-input button`
-  //   );
-  //   sizeButtons.forEach((button) => {
-  //     button.addEventListener("click", function () {
-  //       const input = this.parentElement.querySelector("input");
-  //       let value = parseFloat(input.value);
-  //       const step = 10; // Adjust step value as needed
+        obj.scaleToWidth(newWidth);
+        obj.scaleToHeight(newHeight);
+        obj.setCoords();
+      });
 
-  //       if (this.classList.contains("increase")) {
-  //         value += step;
-  //       } else if (this.classList.contains("decrease") && value > step) {
-  //         value -= step;
-  //       }
+      // 셀렉션 재설정
+      if (originActiveObjects.length > 1) {
+        originActiveObjects.forEach((obj) => {
+          _self.canvas.setActiveObject(obj);
+        });
+        const newSelection = new fabric.ActiveSelection(originActiveObjects, {
+          canvas: _self.canvas,
+        });
+        _self.canvas.setActiveObject(newSelection);
+        console.log(
+          "New selection created with",
+          originActiveObjects.length,
+          "objects"
+        );
+      } else if (originActiveObjects.length === 1) {
+        _self.canvas.setActiveObject(originActiveObjects[0]);
+        console.log("Single object reselected:", originActiveObjects[0].type);
+      }
 
-  //       input.value = Math.round(value);
-  //       input.dispatchEvent(new Event("change"));
-  //     });
-  //   });
-  // })();
-  // // end size section
+      _self.canvas.renderAll();
+      _self.canvas.trigger("object:modified");
+      console.log("Canvas updated with new sizes and selection");
+    };
+
+    // 초기 상태 설정
+    sizeInput.value = JSON.stringify(200);
+    sizeInput.disabled = false;
+    console.log("sizeInput set to default value 200 and enabled");
+
+    // 초기 객체 확인
+    const activeObjects = _self.canvas
+      .getActiveObjects()
+      .filter(
+        (obj) =>
+          obj.type !== "textbox" &&
+          obj.type !== "group" &&
+          obj.type !== "path" &&
+          obj.type !== "line"
+      );
+    console.log("Initial activeObjects:", activeObjects);
+    if (activeObjects.length > 0) {
+      updateObjectSizes(200);
+    } else {
+      console.log(
+        "No initial objects to resize (textbox, group, freedrawing, drawingline, drawingpath excluded), but dropdown remains enabled"
+      );
+    }
+
+    // 크기 변경 이벤트
+    sizeInput.addEventListener("change", function () {
+      const newWidth = JSON.parse(this.value);
+      console.log("Selected size (width):", newWidth);
+      updateObjectSizes(newWidth);
+    });
+  })();
+  // end size section
 
   // border section
   (() => {

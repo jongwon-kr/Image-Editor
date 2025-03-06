@@ -333,10 +333,9 @@ class ImageEditor {
     this.initializeShapes();
     this.initializeFreeDrawSettings();
     this.initializeCanvasSettings();
-    this.initializeSelectionSettings();
-
     this.canvas = this.initializeCanvas();
 
+    this.initializeSelectionSettings();
     this.initializeCopyPaste();
     this.initializeLayerListPanel();
     this.initializeLineDrawing();
