@@ -1,17 +1,16 @@
 import { imgEditor } from "../index.js";
 
 /**
- * Define util functions
+ * 여러 유틸들 정의
  */
 
 /**
- * Get Fabric.js gradient from color stops, orientation, and angle
- * @param {Array} handlers - Array of color stops
- * @param {Number} width - Gradient width
- * @param {Number} height - Gradient height
- * @param {String} orientation - Orientation type: 'linear' or 'radial'
- * @param {Number} angle - The angle of linear gradient in degrees
- * @returns {fabric.Gradient} - Fabric.js gradient object
+ * @param {Array} handlers
+ * @param {Number} width
+ * @param {Number} height
+ * @param {String} orientation
+ * @param {Number} angle
+ * @returns {fabric.Gradient}
  */
 function generateFabricGradientFromColorStops(
   handlers,
@@ -175,6 +174,13 @@ async function getRealBBox(obj) {
  * @param {String} pos - Position to align: 'left', 'center-h', 'right', 'top', 'center-v', 'bottom'
  */
 async function alignObject(canvas, activeSelection, pos) {
+  const canvasElement = document.querySelector(".canvas-container");
+  canvasElement.style.display = "none";
+
+  const tempZoom = canvas.getZoom();
+
+  imgEditor.applyZoom(1);
+
   const bound = activeSelection.getBoundingRect();
   const realBound = await getRealBBox(activeSelection);
 
@@ -235,6 +241,8 @@ async function alignObject(canvas, activeSelection, pos) {
   }
 
   activeSelection.setCoords();
+  imgEditor.applyZoom(tempZoom);
+  canvasElement.style.display = "block";
   canvas.renderAll();
   canvas.trigger("object:modified");
 }
@@ -399,11 +407,14 @@ function downloadImage(data, extension = "png", mimeType = "image/png") {
     return;
   }
 
-  const link = document.createElement("a");
-  link.href = fileURL;
-  link.download = `image.${extension}`;
-  link.dispatchEvent(new MouseEvent("click"));
-  setTimeout(() => window.URL.revokeObjectURL(fileURL), 60);
+  const imgName = window.prompt("저장할 이름을 입력하세요", "image");
+  if (imgName) {
+    const link = document.createElement("a");
+    link.href = fileURL;
+    link.download = `${imgName}.${extension}`;
+    link.dispatchEvent(new MouseEvent("click"));
+    setTimeout(() => window.URL.revokeObjectURL(fileURL), 60);
+  }
 }
 
 /**
@@ -413,11 +424,33 @@ function downloadImage(data, extension = "png", mimeType = "image/png") {
 function downloadSVG(SVGmarkup) {
   const url =
     "data:image/svg+xml;charset=utf-8," + encodeURIComponent(SVGmarkup);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "image.svg";
-  link.dispatchEvent(new MouseEvent("click"));
-  setTimeout(() => window.URL.revokeObjectURL(url), 60);
+
+  const svgName = window.prompt("저장할 이름을 입력하세요", "svg");
+  if (svgName) {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "image.svg";
+    link.dispatchEvent(new MouseEvent("click"));
+    setTimeout(() => window.URL.revokeObjectURL(url), 60);
+  }
+}
+
+// 선택 가능 객체 추출
+function getFilteredFocusObjects() {
+  let objects = imgEditor.canvas.getObjects().filter((obj) => !obj.noFocusing);
+  return objects;
+}
+
+// 선택 불가능 객체 추출
+function getFilteredNoFocusObjects() {
+  let objects = imgEditor.canvas.getObjects().filter((obj) => obj.noFocusing);
+  return objects;
+}
+
+// 중첩자료 객체 추출
+function getOverlayImages() {
+  let objects = imgEditor.canvas.getObjects().filter((obj) => obj.overlayImage);
+  return objects;
 }
 
 export {
@@ -430,4 +463,7 @@ export {
   setActiveFontStyle,
   downloadImage,
   downloadSVG,
+  getFilteredFocusObjects,
+  getFilteredNoFocusObjects,
+  getOverlayImages,
 };

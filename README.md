@@ -9,6 +9,7 @@
 
 #### 폴더 설명
 - `app/assets/` : 이미지, SVG, 아이콘 등 리소스
+- `app/api/` : 외부 API 호출 관련 폴더
 - `app/styles/` : CSS 파일
 - `app/drawing-tools/` : 그림 그리기 관련 모듈 (Line, Path, Text 등)
 - `app/ui/` : UI 컴포넌트 및 화면 관련 모듈

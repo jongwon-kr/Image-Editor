@@ -1,14 +1,13 @@
 /**
- * Define utils to save/load canvas status with local storage
+ * 브라우저에 임시 저장
  */
 
 /**
- * Save a value to local storage
- * @param {string} name - The key under which to store the value
- * @param {any} value - The value to save (objects are stringified)
+ * 로컬 스토리지에 데이터 저장
+ * @param {string} name
+ * @param {any} value
  */
 function save(name, value) {
-  // If item is an object, stringify it
   if (value instanceof Object) {
     value = JSON.stringify(value);
   }
@@ -16,23 +15,22 @@ function save(name, value) {
 }
 
 /**
- * Load a value from local storage
- * @param {string} name - The key to retrieve the value from
- * @returns {any} - The parsed value (JSON-parsed if applicable)
+ * 로컬스토리지 데이터 불러오기
+ * @param {string} name
+ * @returns {any}
  */
 function load(name) {
   let value = localStorage.getItem(name);
   try {
     value = JSON.parse(value);
   } catch (e) {
-    // If parsing fails, return the raw value (e.g., if it wasn’t JSON)
   }
   return value;
 }
 
 /**
- * Remove a value from local storage
- * @param {string} name - The key to remove
+ * 로컬스토리지 저장 값 제거
+ * @param {string} name
  */
 function remove(name) {
   localStorage.removeItem(name);

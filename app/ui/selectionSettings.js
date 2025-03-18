@@ -8,7 +8,7 @@ import {
 } from "../utils/utils.js";
 
 /**
- * initialize selection setting panel
+ * 선택 영역 설정 패널
  */
 
 ("use strict");
@@ -965,7 +965,7 @@ function selectionSettings() {
         <div class="effect-section">
           <h4>효과</h4>
           <div class="input-container"><label>불투명도</label><input id="opacity" type="range" min="0" max="1" value="1" step="0.01"></div>
-          <div class="input-container"><label>블러</label><input class="effect" id="blur" type="range" min="0" max="100" value="50"></div>
+          <div class="input-container"><label>블러</label><input class="effect" id="blur" type="range" min="0" max="100" value="0"></div>
           <div class="input-container"><label>밝기</label><input class="effect" id="brightness" type="range" min="0" max="100" value="50"></div>
           <div class="input-container"><label>포화도</label><input class="effect" id="saturation" type="range" min="0" max="100" value="50"></div>
           <h5>감마</h5>

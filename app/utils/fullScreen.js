@@ -1,6 +1,10 @@
 import { imgEditor } from "../index.js";
 import { removeTooltip } from "../ui/toolbar.js";
 
+/**
+ * 전체화면
+ */
+
 ("use strict");
 
 function fullscreen() {

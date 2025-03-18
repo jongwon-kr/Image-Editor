@@ -1,10 +1,9 @@
 /**
- * Define action to draw text
+ * 글 작성
  */
 
 /**
- * Initialize text box drawing on a Fabric.js canvas
- * @param {fabric.Canvas} fabricCanvas - The Fabric.js canvas instance
+ * @param {fabric.Canvas} fabricCanvas
  */
 function textBoxDrawing(fabricCanvas) {
   let isDrawingText = false,
@@ -65,7 +64,6 @@ function textBoxDrawing(fabricCanvas) {
 
     isDrawingText = false;
 
-    // Replace the rectangle with a textbox
     let textbox = new fabric.Textbox("Your text goes here...", {
       left: textboxRect.left,
       top: textboxRect.top,
@@ -76,7 +74,7 @@ function textBoxDrawing(fabricCanvas) {
     fabricCanvas.remove(textboxRect);
     fabricCanvas.add(textbox).setActiveObject(textbox);
     textbox.setControlsVisibility({
-      mb: false, // Hide middle-bottom control
+      mb: false,
     });
     fabricCanvas.trigger("object:modified");
   });

@@ -1,12 +1,10 @@
-/**
- * Define layer list panel for a Fabric.js canvas
- */
 "use strict";
 
-/**
- * Initialize layer list panel on the right side of the main panel
- * @param {Object} _self - Fabric.js canvas instance
- */
+import { getFilteredFocusObjects, getOverlayImages } from "../utils/utils.js";
+import { retForeImgUrl } from "../api/retForeImgUrl.js";
+import { retModelImgUrl } from "../api/retModelImgUrl.js";
+import { retOceanImgUrl } from "../api/retOceanImgUrl.js";
+
 function layerListPanel() {
   const _self = this;
   const mainPanel = document.querySelector(
@@ -18,17 +16,48 @@ function layerListPanel() {
     `<div class="toolpanel layerpanel visible" id="layer-panel">
       <div class="content">
         <p class="title">레이어</p>
+        <div id="select-layer-type"></div>
         <div id="layer-inner-list"></div>
       </div>
     </div>`
   );
+
+  let layerType = "object";
+
+  const selectLayerType = document.querySelector(
+    `${_self.containerSelector} #select-layer-type`
+  );
+
+  const selectObjectTypeButton = document.createElement("button");
+  selectObjectTypeButton.id = "select-object-type-button";
+  selectObjectTypeButton.value = "object";
+  selectObjectTypeButton.textContent = "요소 레이어";
+  selectObjectTypeButton.addEventListener("click", function () {
+    layerType = this.value;
+    updateLayers();
+  });
+  selectLayerType.appendChild(selectObjectTypeButton);
+
+  const selectOverlayTypeButton = document.createElement("button");
+  selectOverlayTypeButton.id = "select-overlay-type-button";
+  selectOverlayTypeButton.value = "overlay";
+  selectOverlayTypeButton.textContent = "중첩 자료 레이어";
+  selectOverlayTypeButton.addEventListener("click", function () {
+    layerType = this.value;
+    updateLayers();
+  });
+  selectLayerType.appendChild(selectOverlayTypeButton);
 
   const updateLayers = () => {
     const layerList = document.querySelector(
       `${_self.containerSelector} #layer-inner-list`
     );
     layerList.innerHTML = "";
-    const objects = _self.canvas.getObjects();
+    let objects = getFilteredFocusObjects();
+    if (layerType === "overlay") {
+      objects = getOverlayImages();
+    }
+    _self.canvas.renderAll();
 
     objects.forEach((object, index) => {
       if (!object.id) {
@@ -49,8 +78,10 @@ function layerListPanel() {
             <div class="layer-name">
               <input class="layer-custom-name" value="${label}">
               <div class="layer-options">
-                <button class="move-up" title="Move layer up">↑</button>
-                <button class="move-down" title="Move layer down">↓</button>
+                <button class="open-setting" title="설정">S</button>
+                <button class="move-up" title="위로 올리기">↑</button>
+                <button class="move-down" title="내리기">↓</button>
+                <button class="hide-object" title="숨기기">H</button>
               </div>
             </div>
           </div>
@@ -65,7 +96,6 @@ function layerListPanel() {
           `${_self.containerSelector} .layer[data-object="${obj.id}"]`
         );
         if (selectedLayer) selectedLayer.classList.add("layer-selected");
-        else console.warn("Layer not found for active object ID:", obj.id);
       } else {
         console.warn("Active object missing ID:", obj);
       }
@@ -74,21 +104,14 @@ function layerListPanel() {
 
   _self.canvas.on("object:added", (e) => {
     if (e.target && !e.target.id) {
-      e.target.id = `obj-${Date.now()}-${_self.canvas.getObjects().length}`;
+      e.target.id = `obj-${Date.now()}-${getFilteredFocusObjects().length}`;
     }
     updateLayers();
   });
   _self.canvas.on("object:removed", updateLayers);
   _self.canvas.on("object:modified", updateLayers);
-
-  _self.canvas.on("selection:created", (e) => {
-    updateLayers();
-  });
-
-  _self.canvas.on("selection:updated", (e) => {
-    updateLayers();
-  });
-
+  _self.canvas.on("selection:created", updateLayers);
+  _self.canvas.on("selection:updated", updateLayers);
   _self.canvas.on("selection:cleared", () => {
     document
       .querySelectorAll(`${_self.containerSelector} .layer`)
@@ -103,6 +126,8 @@ function layerListPanel() {
         !layer ||
         e.target.classList.contains("move-up") ||
         e.target.classList.contains("move-down") ||
+        e.target.classList.contains("hide-object") ||
+        e.target.classList.contains("open-setting-") ||
         layer.classList.contains("layer-selected")
       )
         return;
@@ -114,12 +139,11 @@ function layerListPanel() {
       if (!selectedObject) return;
 
       const activeObject = _self.canvas.getActiveObject();
-      if (activeObject == selectedObject) {
+      if (activeObject === selectedObject) {
         _self.canvas.discardActiveObject(selectedObject);
       } else {
         _self.canvas.setActiveObject(selectedObject);
       }
-
       _self.canvas.requestRenderAll();
       updateLayers();
     });
@@ -178,7 +202,11 @@ function layerListPanel() {
         .find((obj) => obj.id === objectId);
       if (!object) return;
 
-      if (button.classList.contains("move-up")) {
+      if (button.classList.contains("hide-object")) {
+        object.visible = !object.visible;
+        button.style.backgroundColor = object.visible ? "#ccc" : "#fff";
+        _self.canvas.renderAll();
+      } else if (button.classList.contains("move-up")) {
         const index = _self.canvas.getObjects().indexOf(object);
         if (index < _self.canvas.getObjects().length - 1) {
           _self.canvas.moveTo(object, index + 1);
@@ -190,8 +218,333 @@ function layerListPanel() {
           _self.canvas.moveTo(object, index - 1);
           updateLayers();
         }
+      } else if (button.classList.contains("open-setting")) {
+        if (object.overlayImage) {
+          console.log("중첩 자료 입니다.");
+          openOverlayImageSettingModal(object);
+        }
       }
     });
+
+  function openOverlayImageSettingModal(object) {
+    // Create modal container
+    const modal = document.createElement("div");
+    modal.id = "overlay-image-setting-modal";
+
+    const closeButton = document.createElement("button");
+    closeButton.textContent = "닫기";
+    closeButton.style.cssText = "position: absolute; top: 10px; right: 10px;";
+    closeButton.addEventListener("click", () => modal.remove());
+    modal.appendChild(closeButton);
+
+    const content = document.createElement("div");
+    content.classList.add("content");
+
+    const title = document.createElement("p");
+    title.classList.add("title");
+    title.textContent = "기상자료 이미지 수정";
+    content.appendChild(title);
+
+    const tabContainer = document.createElement("div");
+    tabContainer.classList.add("tab-container");
+
+    const tabs = [
+      { label: "모델 이미지 API", api: retModelImgUrl, id: "modelImg" },
+      {
+        label: "해양 모델 이미지 API",
+        api: retOceanImgUrl,
+        id: "oceanImg",
+      },
+      {
+        label: "예측 변수 이미지 API",
+        api: retForeImgUrl,
+        id: "foreImg",
+      },
+    ];
+
+    let activeTabCnt = 0;
+    let tab;
+    tabs.forEach((t) => {
+      if (t.id == object.apiType) {
+        tab = t;
+      }
+    });
+    const tabWrapper = document.createElement("div");
+    tabWrapper.classList.add("tab-wrapper");
+
+    const tabButton = document.createElement("button");
+    tabButton.textContent = tab.label;
+    tabButton.classList.add("tab-button");
+    tabButton.id = `${object.apiType}-button`;
+
+    const tabContent = document.createElement("div");
+    tabContent.classList.add("tab-content");
+    tabContent.id = `${object.apiType}-content`;
+
+    const form = createForm(object.apiType, tab.api, object, _self);
+    tabContent.appendChild(form);
+    console.log(object);
+    tabButton.addEventListener("click", () => {
+      const isActive = tabContent.classList.contains("active");
+      if (isActive) {
+        activeTabCnt--;
+        tabContent.classList.remove("active");
+        tabButton.classList.remove("active");
+      } else {
+        activeTabCnt++;
+        if (activeTabCnt > 1) {
+          tabContainer
+            .querySelectorAll(".tab-content")
+            .forEach((el) => el.classList.remove("active"));
+          tabContainer
+            .querySelectorAll(".tab-button")
+            .forEach((el) => el.classList.remove("active"));
+          activeTabCnt = 1;
+        }
+        tabContent.classList.add("active");
+        tabButton.classList.add("active");
+      }
+    });
+
+    tabWrapper.appendChild(tabButton);
+    tabWrapper.appendChild(tabContent);
+    tabContainer.appendChild(tabWrapper);
+    content.appendChild(tabContainer);
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+  }
+
+  function createForm(tabId, apiService, object, _self) {
+    const form = document.createElement("form");
+    form.classList.add("api-form");
+
+    let fields = [];
+    if (tabId === "modelImg") {
+      fields = [
+        {
+          label: "모델",
+          name: "modl",
+          type: "select",
+          options: ["GDAPS_KIM", "RDAPS", "LDAPS"],
+          value: object.params.get("modl") || "GDAPS_KIM",
+        },
+        {
+          label: "자료 구분",
+          name: "varGrp",
+          type: "select",
+          options: ["PRSS_HGT", "UNIS_SFC"],
+          value: object.params.get("varGrp") || "PRSS_HGT",
+        },
+        {
+          label: "변수",
+          name: "var",
+          type: "select",
+          options: ["HGT", "TMP"],
+          value: object.params.get("var") || "HGT",
+        },
+        {
+          label: "연직층",
+          name: "lev",
+          type: "select",
+          options: ["1000", "850", "500"],
+          value: object.params.get("lev") || "1000",
+        },
+        {
+          label: "분석 시간",
+          name: "analTime",
+          type: "text",
+          value: object.params.get("analTime") || "201905180000",
+        },
+        {
+          label: "예측 시간",
+          name: "foreTime",
+          type: "text",
+          value: object.params.get("foreTime") || "201905180000",
+        },
+        {
+          label: "선 색상",
+          name: "contourLineColor",
+          type: "text",
+          value: "0xffffff",
+        },
+        {
+          label: "선 종류",
+          name: "contourLineDiv",
+          type: "select",
+          options: ["A", "D", "H"],
+          value: "A",
+        },
+        {
+          label: "선 두께",
+          name: "contourLineThck",
+          type: "select",
+          options: ["1", "2", "3", "4", "5", "6", "7", "8"],
+          value: "1",
+        },
+        {
+          label: "스무딩 레벨",
+          name: "basicSmtLvl",
+          type: "select",
+          options: ["1", "2", "3", "4"],
+          value: object.params.get("basicSmtLvl") || "1",
+        },
+      ];
+    } else if (tabId === "oceanImg") {
+      fields = [
+        {
+          label: "모델 그룹",
+          name: "modlGrp",
+          type: "select",
+          options: ["GWW", "RWW"],
+          value: object.params.get("modlGrp") || "GWW",
+        },
+        {
+          label: "상세 모델",
+          name: "modl",
+          type: "select",
+          options: ["GWW3", "ECMWF_HWAM"],
+          value: object.params.get("modl") || "GWW3",
+        },
+        {
+          label: "변수",
+          name: "var",
+          type: "select",
+          options: ["WSPD_SNW", "WVHGT"],
+          value: object.params.get("var") || "WSPD_SNW",
+        },
+        {
+          label: "분석 시간",
+          name: "analTime",
+          type: "text",
+          value: object.params.get("analTime") || "201705110000",
+        },
+        {
+          label: "예측 시간",
+          name: "foreTime",
+          type: "text",
+          value: object.params.get("foreTime") || "201705110000",
+        },
+      ];
+    } else if (tabId === "foreImg") {
+      fields = [
+        {
+          label: "자료 그룹",
+          name: "varGrp",
+          type: "select",
+          options: ["UNIS_SFC_WBT", "INSTB_IDX"],
+          value: object.params.get("varGrp") || "UNIS_SFC_WBT",
+        },
+        {
+          label: "변수",
+          name: "var",
+          type: "select",
+          options: ["WBT", "CAPE"],
+          value: object.params.get("var") || "WBT",
+        },
+        {
+          label: "모델",
+          name: "modl",
+          type: "select",
+          options: ["GDAPS_KIM", "RDAPS"],
+          value: object.params.get("modl") || "GDAPS_KIM",
+        },
+        {
+          label: "연직층",
+          name: "lev",
+          type: "select",
+          options: ["2", "850"],
+          value: object.params.get("lev") || "2",
+        },
+        {
+          label: "분석 시간",
+          name: "analTime",
+          type: "text",
+          value: object.params.get("analTime") || "201905180000",
+        },
+        {
+          label: "예측 시간",
+          name: "foreTime",
+          type: "text",
+          value: object.params.get("foreTime") || "201905180000",
+        },
+      ];
+    }
+
+    fields.forEach((field) => {
+      const label = document.createElement("label");
+      label.textContent = field.label;
+      const input =
+        field.type === "select"
+          ? createSelect(field.name, field.options, field.value)
+          : createInput(field.name, field.value);
+      form.appendChild(label);
+      form.appendChild(input);
+    });
+
+    const updateButton = document.createElement("button");
+    updateButton.textContent = "업데이트";
+    updateButton.type = "button";
+    updateButton.addEventListener("click", async () => {
+      const params = new FormData(form);
+      const updatedParams = new URLSearchParams(object.params); // 기존 params 유지
+      for (const [key, value] of params) {
+        updatedParams.set(key, value); // 새로운 값으로 업데이트
+      }
+
+      const data = await fetchData(
+        apiService,
+        Object.fromEntries(updatedParams)
+      );
+      if (data) {
+        updateImageSrc(object, data, _self);
+        console.log("Updated params:", updatedParams.toString());
+      }
+    });
+    form.appendChild(updateButton);
+
+    return form;
+  }
+
+  function createSelect(name, options, selectedValue) {
+    const select = document.createElement("select");
+    select.name = name;
+    options.forEach((opt) => {
+      const option = document.createElement("option");
+      option.value = opt;
+      option.textContent = opt;
+      if (opt === selectedValue) option.selected = true;
+      select.appendChild(option);
+    });
+    return select;
+  }
+
+  function createInput(name, value) {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.name = name;
+    input.value = value || "";
+    return input;
+  }
+
+  async function fetchData(apiService, params) {
+    const response = await apiService(params);
+    return {
+      image: await response.image.blob(),
+      params: response.params,
+    };
+  }
+
+  function updateImageSrc(object, data, _self) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const newSrc = e.target.result;
+      object.setSrc(newSrc, () => {
+        object.params = data.params; // Update params
+        _self.canvas.renderAll();
+      });
+    };
+    reader.readAsDataURL(data.image);
+  }
 
   updateLayers();
 }

@@ -3,6 +3,7 @@ import { lineDrawing } from "./drawing-tools/drawingLine.js";
 import { pathDrawing } from "./drawing-tools/drawingPath.js";
 import { textBoxDrawing } from "./drawing-tools/drawingText.js";
 import { tipPanel } from "./ui/tip.js";
+import { weatherData } from "./ui/weatherData.js";
 import { images } from "./ui/images.js";
 import { canvas } from "./ui/canvas.js";
 import { toolbar } from "./ui/toolbar.js";
@@ -14,9 +15,9 @@ import { zoom } from "./utils/zoom.js";
 import { templates } from "./ui/templates.js";
 import { fullscreen } from "./utils/fullScreen.js";
 import { layerListPanel } from "./ui/layerListPanel.js";
+import { getOverlayImages } from "./utils/utils.js";
 
 /**
- * Image Editor class
  * @param {String} containerSelector jquery selector for image editor container
  * @param {Object} dimensions define canvas dimensions
  * @param {Array} buttons define toolbar buttons
@@ -76,7 +77,10 @@ class ImageEditor {
         if (id === "select") {
           console.log("selection");
           selectedPanel.className = `toolpanel visible type-${this.activeSelection.type}`;
-          console.log("this.canvas.getActiveObjects()", this.canvas.getActiveObjects());
+          console.log(
+            "this.canvas.getActiveObjects()",
+            this.canvas.getActiveObjects()
+          );
         }
       }
     }
@@ -97,6 +101,11 @@ class ImageEditor {
     this.canvas.forEachObject((o) => {
       o.selectable = true;
       o.evented = true;
+    });
+
+    getOverlayImages().forEach((o) => {
+      o.selectable = false;
+      o.evented = false;
     });
 
     switch (id) {
@@ -149,10 +158,16 @@ class ImageEditor {
         const current = undoList[undoList.length - 1];
         this.history.undo();
         current &&
-          this.canvas.loadFromJSON(
-            JSON.parse(current),
-            this.canvas.renderAll.bind(this.canvas)
-          );
+          this.canvas.loadFromJSON(JSON.parse(current), () => {
+            this.canvas.getObjects().forEach((obj) => {
+              if (obj.noFocusing) {
+                obj.selectable = false;
+                obj.evented = false;
+              }
+            });
+            this.canvas.renderAll();
+            console.log(this.canvas.getObjects());
+          });
       }
     } catch (_) {
       console.error("undo failed");
@@ -167,10 +182,16 @@ class ImageEditor {
         const current = redoList[redoList.length - 1];
         this.history.redo();
         current &&
-          this.canvas.loadFromJSON(
-            JSON.parse(current),
-            this.canvas.renderAll.bind(this.canvas)
-          );
+          this.canvas.loadFromJSON(JSON.parse(current), () => {
+            this.canvas.getObjects().forEach((obj) => {
+              if (obj.noFocusing) {
+                obj.selectable = false;
+                obj.evented = false;
+              }
+            });
+            this.canvas.renderAll();
+            console.log(this.canvas.getObjects());
+          });
       }
     } catch (_) {
       console.error("redo failed");
@@ -218,6 +239,10 @@ class ImageEditor {
     textBoxDrawing(this.canvas);
   }
 
+  initializeWeatherData() {
+    weatherData.call(this);
+  }
+
   initializeImages() {
     images.call(this);
   }
@@ -254,7 +279,7 @@ class ImageEditor {
     fullscreen.call(this);
   }
 
-  initializeLayerListPanel(){
+  initializeLayerListPanel() {
     layerListPanel.call(this);
   }
 
@@ -327,7 +352,6 @@ class ImageEditor {
   }
 
   init() {
-    this.configUndoRedoStack();
     this.initializeToolbar();
     this.initializeMainPanel();
     this.initializeShapes();
@@ -341,9 +365,11 @@ class ImageEditor {
     this.initializeLineDrawing();
     this.initializePathDrawing();
     this.initializeTextBoxDrawing();
+    this.initializeWeatherData();
     this.initializeImages();
     this.initializeTipSection();
     this.initializeZoom();
+    this.configUndoRedoStack();
     try {
       this.initializeTemplates();
     } catch (error) {

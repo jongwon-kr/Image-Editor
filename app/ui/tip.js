@@ -1,5 +1,5 @@
 /**
- * Define actions to manage tip section
+ * 도움말 패널
  */
 function tipPanel() {
   const defaultTips = [

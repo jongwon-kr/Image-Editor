@@ -1,11 +1,8 @@
 /**
- * Define action to pen draw by mouse action
+ * 자유 그리기 세팅
  */
 "use strict";
 
-/**
- * Initialize free drawing settings for a Fabric.js canvas
- */
 function freeDrawSettings() {
   let width = 1;
   let style = "pencil";

@@ -1,5 +1,9 @@
 import { imgEditor } from "../index.js";
 
+/**
+ * 줌 기능 정의
+ */
+
 function zoom() {
   const _self = imgEditor;
   let currentZoomLevel = 1;

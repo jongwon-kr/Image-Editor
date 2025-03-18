@@ -1,6 +1,7 @@
 /**
- * Define action to draw line by mouse actions
+ * 선 그리기
  */
+
 function lineDrawing(fabricCanvas) {
   let isDrawingLine = false,
     lineToDraw,

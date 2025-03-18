@@ -1,10 +1,7 @@
 /**
  * 이미지 사이즈 조절
- * @param {String} imageUrl
- * @param {Number} maxWidth
- * @param {Number} maxHeight
- * @param {Function} callback
  */
+
 function resizeImg(imageUrl, maxWidth, callback) {
   // 이미지 요소 생성
   const img = new Image();

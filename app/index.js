@@ -1,11 +1,20 @@
-import { ImageEditor } from "./core.js"; // Update with the correct file structure
+import { ImageEditor } from "./core.js";
 import "./styles/style.css";
 
-// 초기 canvas 치수
-const dimensions = {
+const loadCanvasData = JSON.parse(window.localStorage.getItem("canvasEditor"));
+console.log("loadCanvasData", loadCanvasData);
+let dimensions = {
   width: 1280,
   height: 720,
 };
+// 초기 canvas 치수
+if (loadCanvasData) {
+  dimensions = {
+    width: loadCanvasData.backgroundImage.width || 1280,
+    height: loadCanvasData.backgroundImage.height || 720,
+  };
+}
+
 
 // tool bar에 보여지는 버튼
 const buttons = [
@@ -15,6 +24,7 @@ const buttons = [
   "line",
   "path",
   "textbox",
+  "weatherData",
   "images",
   "background",
   "undo",

@@ -1,15 +1,15 @@
 /**
- * Define action to draw path by mouse action
+ * 선 잇기
  */
 
 /**
- * Check if cursor is within a radius of a target point
- * @param {number} radius - The radius to check within
- * @param {number} cursorX - X coordinate of the cursor
- * @param {number} cursorY - Y coordinate of the cursor
- * @param {number} targetX - X coordinate of the target point
- * @param {number} targetY - Y coordinate of the target point
- * @returns {boolean} - True if within range, false otherwise
+
+ * @param {number} radius
+ * @param {number} cursorX
+ * @param {number} cursorY
+ * @param {number} targetX
+ * @param {number} targetY
+ * @returns {boolean}
  */
 function inRange(radius, cursorX, cursorY, targetX, targetY) {
   return (

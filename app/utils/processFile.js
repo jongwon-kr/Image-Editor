@@ -1,9 +1,17 @@
 import { imgEditor } from "../index.js";
 
+/**
+ * jpg, png, svg 파일 처리
+ */
+
 function processFiles(files) {
   return new Promise((resolve) => {
     // files가 유효한지 확인
-    if (!files || (typeof files !== 'object' && !Array.isArray(files)) || files.length === 0) {
+    if (
+      !files ||
+      (typeof files !== "object" && !Array.isArray(files)) ||
+      files.length === 0
+    ) {
       console.warn("유효하지 않은 files 매개변수:", files);
       return resolve([]);
     }
@@ -30,7 +38,9 @@ function processFiles(files) {
             let obj = fabric.util.groupSVGElements(objects, options);
             pushToFileList(obj, file, f.target.result);
 
-            obj.set({ left: 0, top: 0 }).setCoords();
+            obj
+              .set({ left: 0, top: 0 })
+              .setCoords();
             canvas.add(obj);
             canvas.renderAll();
             canvas.trigger("object:modified");
@@ -45,7 +55,9 @@ function processFiles(files) {
           fabric.Image.fromURL(f.target.result, (img) => {
             pushToFileList(img, file, f.target.result);
 
-            img.set({ left: 0, top: 0 });
+            img
+              .set({ left: 0, top: 0 })
+              .setCoords();
             img.scaleToHeight(300);
             img.scaleToWidth(300);
 

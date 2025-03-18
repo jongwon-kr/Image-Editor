@@ -1,3 +1,7 @@
+/**
+ * 복사, 붙여넣기
+ */
+
 "use strict";
 
 function copyPaste(canvas) {

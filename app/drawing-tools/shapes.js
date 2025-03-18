@@ -1,5 +1,5 @@
 /**
- * Define action to add shape to canvas
+ * 도형 그리기
  */
 "use strict";
 

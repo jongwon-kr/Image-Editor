@@ -1,13 +1,13 @@
 import { save, load } from "../utils/saveInBrowser.js";
+import {
+  getFilteredFocusObjects,
+  getFilteredNoFocusObjects,
+} from "../utils/utils.js";
 /**
- * Canvas section management of image editor
+ * 캔버스
  */
 ("use strict");
 
-/**
- * Initialize the Fabric.js canvas for the image editor
- * @returns {fabric.Canvas|null} - The initialized Fabric.js canvas instance or null if initialization fails
- */
 function canvas() {
   try {
     const mainPanel = document.querySelector(
@@ -21,6 +21,18 @@ function canvas() {
 
     // Initialize Fabric.js canvas
     const fabricCanvas = new fabric.Canvas("c").setDimensions(this.dimensions);
+
+    // 속성 직렬화 -> undo/redo시 객체의 속성 초기화 문제
+    fabricCanvas.toJSON = (function (originalFn) {
+      return function (propertiesToInclude) {
+        return originalFn.call(this, [
+          ...(propertiesToInclude || []),
+          "noFocusing",
+          "overlayImage",
+          "label",
+        ]);
+      };
+    })(fabricCanvas.toJSON);
 
     fabricCanvas.originalW = fabricCanvas.width;
     fabricCanvas.originalH = fabricCanvas.height;
@@ -40,13 +52,14 @@ function canvas() {
     });
 
     // Selection events
-    fabricCanvas.on("selection:created", (e) =>
-      this.setActiveSelection(e.target)
-    );
-    fabricCanvas.on("selection:updated", (e) =>
-      this.setActiveSelection(e.target)
-    );
-    fabricCanvas.on("selection:cleared", () => this.setActiveSelection(null));
+    fabricCanvas.on("selection:created", (e) => {
+      this.setActiveSelection(e.target);
+      fabricCanvas.trigger("object:modified");
+    });
+    fabricCanvas.on("selection:updated", (e) => {
+      this.setActiveSelection(e.target);
+      fabricCanvas.trigger("object:modified");
+    });
 
     // Guide lines array to manage them
     let guideLines = [];
@@ -79,6 +92,7 @@ function canvas() {
         selectable: false,
         evented: false,
         excludeFromExport: true,
+        noFocusing: true,
       });
       fabricCanvas.add(line);
       guideLines.push(line);
@@ -93,6 +107,12 @@ function canvas() {
       const canvasHeight = fabricCanvas.originalH;
       const snapThreshold = 5; // 20px snapping threshold
 
+      let objects = getFilteredNoFocusObjects();
+      objects.forEach((obj) => {
+        obj.selectable = false;
+        obj.evented = false;
+        obj.noFocusing = true;
+      });
       // Remove existing guide lines before recalculating
       removeGuideLines();
 
@@ -158,24 +178,36 @@ function canvas() {
     // Track modifications for undo/redo
     fabricCanvas.on("object:modified", () => {
       console.log("fire: modified");
-      const currentState = this.canvas.toJSON();
+      let objects = fabricCanvas.getObjects().filter((obj) => obj.noFocusing);
+      objects.forEach((obj) => {
+        obj.selectable = false;
+        obj.evented = false;
+        obj.noFocusing = true;
+      });
+      const currentState = fabricCanvas.toJSON();
       this.history.push(JSON.stringify(currentState));
     });
 
     // Load saved canvas state if available
     const savedCanvas = load("canvasEditor");
     if (savedCanvas) {
-      fabricCanvas.loadFromJSON(
-        savedCanvas,
-        fabricCanvas.renderAll.bind(fabricCanvas)
-      );
+      fabricCanvas.loadFromJSON(savedCanvas, () => {
+        // 로드 후 객체 속성 복원
+        fabricCanvas.getObjects().forEach((obj) => {
+          if (obj.noFocusing) {
+            obj.selectable = false;
+            obj.evented = false;
+          }
+        });
+        fabricCanvas.renderAll();
+      });
     }
 
     document.addEventListener("keydown", (e) => {
       if (e.ctrlKey && e.key.toLowerCase() === "a") {
         e.preventDefault();
 
-        const objects = fabricCanvas.getObjects();
+        const objects = getFilteredFocusObjects();
         const activeObjects = fabricCanvas.getActiveObjects();
         if (objects.length == activeObjects.length) return;
 

@@ -1,16 +1,17 @@
+import { mapArea } from "../api/data/mapArea.js";
+import { retBackMapUrl } from "../api/retBackMapUrl.js";
 import { resizeImg } from "../utils/resizeImg.js";
-import { generateFabricGradientFromColorStops } from "../utils/utils.js";
+import {
+  generateFabricGradientFromColorStops,
+  getFilteredNoFocusObjects,
+} from "../utils/utils.js";
 /**
- * Initialize canvas setting panel
+ * 캔버스 세팅
  */
 ("use strict");
 
-/**
- * Initialize canvas settings for a Fabric.js canvas
- */
 function canvasSettings() {
   const _self = this;
-
   let width = 1280;
   let height = 720;
 
@@ -131,9 +132,23 @@ function canvasSettings() {
             <div id="set-canvas-background-image">
               <input type="file" id="fileInput" accept="image/*" style="display:none;">
               <span>미리보기</span>
-              <img id="background-img" src="123">
-              <div>
-                <button id="select-background-img-btn">배경화면 선택</button>
+              <img id="background-img" src="">
+              <div id="set-background-tab">
+                <button id="select-background-img-btn">이미지 선택</button>
+                <div style="display: row;">
+                  <span>영역</span>
+                  <select id="select-background-map-area">
+                    <option value="EASIA" selected>동아시아</option>
+                    <option value="KOR">한반도 전체</option>
+                    <option value="SKOR">한반도</option>
+                  </select>
+                  <span>종류</span>
+                  <select id="select-background-map-type">
+                    <option value="IMG" selected>위성사진</option>
+                    <option value="WC">주제도</option>
+                  </select>
+                  <button id="get-background-img-btn" style="margin-top: 3px;">주제도 조회</button>
+                </div>
                 <button id="set-background-img-btn">배경화면 적용</button>
               </div>
             </div>
@@ -301,7 +316,7 @@ function canvasSettings() {
           updateGradientFill();
         });
       });
-
+    const backgroundImage = document.querySelector("#background-img");
     const fileInput = document.querySelector("#fileInput");
     const selectBackgroundImageBtn = document.querySelector(
       "#select-background-img-btn"
@@ -328,46 +343,100 @@ function canvasSettings() {
       reader.readAsDataURL(file);
     });
 
+    const selectedMapArea = {};
+
+    const selectBackgroundMapArea = document.querySelector(
+      "#select-background-map-area"
+    );
+    selectBackgroundMapArea.addEventListener("change", (e) => {
+      const selectedArea = mapArea.filter(
+        (o) => o.mapRange === e.target.value
+      )[0];
+      // 좌상 경, 위도
+      selectedMapArea.stLon = selectedArea.stLon;
+      selectedMapArea.stLat = selectedArea.stLat;
+      // 우하 경, 위도
+      selectedMapArea.edLon = selectedArea.edLon;
+      selectedMapArea.edLat = selectedArea.edLat;
+      // zoom 레벨
+      selectedMapArea.ZOOMLVL = selectedArea.ZOOMLVL;
+    });
+
+    const selectBackgroundMapType = document.querySelector(
+      "#select-background-map-type"
+    );
+
+    selectBackgroundMapType.addEventListener("change", (e) => {
+      const selectedType = e.target.value;
+      selectedMapArea.type = selectedType;
+    });
+
+    const getBackgroundImageBtn = document.querySelector(
+      "#get-background-img-btn"
+    );
+
+    getBackgroundImageBtn.addEventListener("click", async () => {
+      console.log("주제도 불러오기 버튼 클릭");
+      const response = await retBackMapUrl(selectedMapArea);
+      const data = await response.blob();
+      const reader = new FileReader();
+      if (data)
+        reader.onload = function (e) {
+          imageBase64 = e.target.result;
+          resizeImg(imageBase64, 240, function (resizedImageUrl) {
+            backgroundImage.src = resizedImageUrl;
+          });
+        };
+      reader.readAsDataURL(data);
+    });
+
     const setBackgroundImageBtn = document.querySelector(
       "#set-background-img-btn"
     );
-    const backgroundImage = document.querySelector("#background-img");
 
     setBackgroundImageBtn.addEventListener("click", function () {
       if (!imageBase64) {
         alert("이미지를 선택하세요");
         return;
       }
-
-      fabric.Image.fromURL(imageBase64, function (img) {
-        // 이미지의 원본 크기를 캔버스 크기로 설정
-        const imgWidth = img.width;
-        const imgHeight = img.height;
-
-        width = imgWidth;
-        height = imgHeight;
-
-        // 캔버스 크기 업데이트
-        _self.canvas.originalW = width;
-        _self.canvas.originalH = height;
-
-        // 입력 필드 값도 업데이트
-        document.querySelector(
-          `${_self.containerSelector} .toolpanel#background-panel .content #input-width`
-        ).value = imgWidth;
-        document.querySelector(
-          `${_self.containerSelector} .toolpanel#background-panel .content #input-height`
-        ).value = imgHeight;
-
-        // 배경 이미지 설정 (스케일링 제거)
-        _self.canvas.setBackgroundImage(img);
-        if (typeof _self.fitZoom === "function") _self.fitZoom1();
-        // 아래 fitZoom을 선택하면 화면의 크기에 맞게 자동 조절됨
-        // if (typeof _self.fitZoom === "function") _self.fitZoom();
-      });
+      URLToImage(imageBase64);
     });
   };
+  function URLToImage(imageBase64) {
+    if (!imageBase64) return;
 
+    fabric.Image.fromURL(imageBase64, function (img) {
+      // 이미지의 원본 크기를 캔버스 크기로 설정
+      const imgWidth = img.width;
+      const imgHeight = img.height;
+
+      width = imgWidth;
+      height = imgHeight;
+
+      // 캔버스 크기 업데이트
+      _self.canvas.originalW = width;
+      _self.canvas.originalH = height;
+
+      // 입력 필드 값도 업데이트
+      document.querySelector(
+        `${_self.containerSelector} .toolpanel#background-panel .content #input-width`
+      ).value = imgWidth;
+      document.querySelector(
+        `${_self.containerSelector} .toolpanel#background-panel .content #input-height`
+      ).value = imgHeight;
+
+      let objects = getFilteredNoFocusObjects();
+      objects.forEach((obj) => {
+        _self.canvas.remove(obj);
+      });
+
+      // 배경 이미지 설정 (스케일링 제거)
+      _self.canvas.setBackgroundImage(img);
+      if (typeof _self.fitZoom === "function") _self.fitZoom1();
+      // 아래 fitZoom을 선택하면 화면의 크기에 맞게 자동 조절됨
+      // if (typeof _self.fitZoom === "function") _self.fitZoom();
+    });
+  }
   // Initialize both sections
   initCanvasSizeSection();
   initBackgroundSection();
