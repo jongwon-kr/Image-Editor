@@ -92,7 +92,7 @@ function arrowDrawing(fabricCanvas) {
     fabricCanvas.renderAll();
   });
 
-  // 화살표 경로 업데이트 함수 추가
+  // 화살표 경로 업데이트 함수 수정
   function updateArrowPath(pointer) {
     if (!arrowPath) return;
 
@@ -108,6 +108,10 @@ function arrowDrawing(fabricCanvas) {
       ["M", startPoint.x, startPoint.y],
       ["L", endPoint.x, endPoint.y]
     ];
+
+    // 시작점과 끝점을 객체의 속성으로 저장
+    arrowPath.startPoint = startPoint;
+    arrowPath.endPoint = endPoint;
 
     // 화살표 헤드 그리기
     drawArrowHead(arrowPath, endPoint.x, endPoint.y, startPoint.x, startPoint.y);
@@ -171,7 +175,7 @@ function arrowDrawing(fabricCanvas) {
         left: (startPoint.x + endPoint.x) / 2,
         top: (startPoint.y + endPoint.y) / 2,
         radius: 5,
-        fill: '#ffffff',
+        fill: '#ccccff',
         stroke: '#000000',
         strokeWidth: 1,
         originX: 'center',
@@ -182,7 +186,15 @@ function arrowDrawing(fabricCanvas) {
         selectable: true,
         evented: true,
         perPixelTargetFind: true,
-        targetFindTolerance: 4
+        targetFindTolerance: 4,
+        isControlPoint: true,
+        hoverCursor: 'move',
+        lockScalingX: true,
+        lockScalingY: true,
+        lockRotation: true,
+        hasControls: false,
+        hasBorders: false,
+        excludeFromExport: true
       });
 
       // 화살표와 제어점 연결

@@ -61,12 +61,16 @@ function canvas() {
 
     // Selection events
     fabricCanvas.on("selection:created", (e) => {
-      this.setActiveSelection(e.target);
-      fabricCanvas.trigger("object:modified");
+      if (e.target && !e.target.isControlPoint) {
+        this.setActiveSelection(e.target);
+        fabricCanvas.trigger("object:modified");
+      }
     });
     fabricCanvas.on("selection:updated", (e) => {
-      this.setActiveSelection(e.target);
-      fabricCanvas.trigger("object:modified");
+      if (e.target && !e.target.isControlPoint) {
+        this.setActiveSelection(e.target);
+        fabricCanvas.trigger("object:modified");
+      }
     });
 
     // Guide lines array to manage them
@@ -109,18 +113,20 @@ function canvas() {
     // Snap to center and edges while moving
     fabricCanvas.on("object:moving", (e) => {
       if (isSnapping) return;
-
       const obj = e.target;
+      
+      // 제어점인 경우 스냅 기능 건너뛰기
+      if (obj.isControlPoint) {
+        return;
+      }
+
       const canvasWidth = fabricCanvas.originalW;
       const canvasHeight = fabricCanvas.originalH;
-      const snapThreshold = 5; // 20px snapping threshold
+      const snapThreshold = 5;
 
-      let objects = getFilteredNoFocusObjects();
-      objects.forEach((obj) => {
-        obj.selectable = false;
-        obj.evented = false;
-        obj.noFocusing = true;
-      });
+      // 필터링할 때 제어점 제외
+      let objects = getFilteredNoFocusObjects().filter(obj => !obj.isControlPoint);
+      
       // Remove existing guide lines before recalculating
       removeGuideLines();
 
@@ -313,6 +319,27 @@ function canvas() {
       "afterend",
       '<div id="footer-bar" class="toolbar"></div>'
     );
+
+    // 제어점이 다른 객체 위로 드래그될 때도 이동 가능하도록 수정
+    fabricCanvas.on('mouse:down', function(options) {
+      if (!options.target) return;
+      
+      if (options.target.isControlPoint) {
+        // 제어점인 경우 다른 객체와의 상호작용 방지
+        options.target.bringToFront();
+        fabricCanvas.setActiveObject(options.target);
+        fabricCanvas.renderAll();
+        return;
+      }
+    });
+
+    // 제어점 이동 시 다른 객체와의 상호작용 방지
+    fabricCanvas.on('mouse:over', function(e) {
+      if (e.target && e.target.isControlPoint) {
+        e.target.bringToFront();
+      }
+    });
+
     return fabricCanvas;
   } catch (_) {
     console.error("can't create canvas instance");
