@@ -227,36 +227,22 @@ function layerListPanel() {
     });
 
   function openOverlayImageSettingModal(object) {
-    // Create modal container
     const modal = document.createElement("div");
     modal.id = "overlay-image-setting-modal";
 
-    const closeButton = document.createElement("button");
-    closeButton.textContent = "닫기";
-    closeButton.style.cssText = "position: absolute; top: 10px; right: 10px;";
-    closeButton.addEventListener("click", () => modal.remove());
-    modal.appendChild(closeButton);
-
     const content = document.createElement("div");
     content.classList.add("content");
-
-    const title = document.createElement("p");
-    title.classList.add("title");
-    title.textContent = "기상자료 이미지 수정";
-    content.appendChild(title);
 
     const tabContainer = document.createElement("div");
     tabContainer.classList.add("tab-container");
 
     const tabs = [
-      { label: "모델 이미지 API", api: retModelImgUrl, id: "modelImg" },
+      { api: retModelImgUrl, id: "modelImg" },
       {
-        label: "해양 모델 이미지 API",
         api: retOceanImgUrl,
         id: "oceanImg",
       },
       {
-        label: "예측 변수 이미지 API",
         api: retForeImgUrl,
         id: "foreImg",
       },
@@ -272,10 +258,22 @@ function layerListPanel() {
     const tabWrapper = document.createElement("div");
     tabWrapper.classList.add("tab-wrapper");
 
-    const tabButton = document.createElement("button");
-    tabButton.textContent = tab.label;
-    tabButton.classList.add("tab-button");
-    tabButton.id = `${object.apiType}-button`;
+    const tabHeader = document.createElement("div");
+    tabHeader.id = `${object.apiType}-header`;
+    tabHeader.style.cssText =
+      "display: flex; justify-content: space-between; align-items: center;";
+
+    const tabLabel = document.createElement("p");
+    tabLabel.textContent = object.label;
+    tabLabel.classList.add("tab-label");
+    tabLabel.id = `${object.apiType}-label`;
+    tabHeader.appendChild(tabLabel);
+
+    const closeButton = document.createElement("button");
+    closeButton.textContent = "닫기";
+    closeButton.style.cssText = "height: 50%;";
+    closeButton.addEventListener("click", () => modal.remove());
+    tabHeader.appendChild(closeButton);
 
     const tabContent = document.createElement("div");
     tabContent.classList.add("tab-content");
@@ -284,29 +282,8 @@ function layerListPanel() {
     const form = createForm(object.apiType, tab.api, object, _self);
     tabContent.appendChild(form);
     console.log(object);
-    tabButton.addEventListener("click", () => {
-      const isActive = tabContent.classList.contains("active");
-      if (isActive) {
-        activeTabCnt--;
-        tabContent.classList.remove("active");
-        tabButton.classList.remove("active");
-      } else {
-        activeTabCnt++;
-        if (activeTabCnt > 1) {
-          tabContainer
-            .querySelectorAll(".tab-content")
-            .forEach((el) => el.classList.remove("active"));
-          tabContainer
-            .querySelectorAll(".tab-button")
-            .forEach((el) => el.classList.remove("active"));
-          activeTabCnt = 1;
-        }
-        tabContent.classList.add("active");
-        tabButton.classList.add("active");
-      }
-    });
 
-    tabWrapper.appendChild(tabButton);
+    tabWrapper.appendChild(tabHeader);
     tabWrapper.appendChild(tabContent);
     tabContainer.appendChild(tabWrapper);
     content.appendChild(tabContainer);
@@ -316,7 +293,7 @@ function layerListPanel() {
 
   function createForm(tabId, apiService, object, _self) {
     const form = document.createElement("form");
-    form.classList.add("api-form");
+    form.classList.add("overlay-setting-form");
 
     let fields = [];
     if (tabId === "modelImg") {
@@ -364,22 +341,22 @@ function layerListPanel() {
         {
           label: "선 색상",
           name: "contourLineColor",
-          type: "text",
-          value: "0xffffff",
+          type: "color",
+          value: object.params.get("contourLineColor") || "0x0000ff",
         },
         {
           label: "선 종류",
           name: "contourLineDiv",
           type: "select",
           options: ["A", "D", "H"],
-          value: "A",
+          value: object.params.get("contourLineDiv") || "A",
         },
         {
           label: "선 두께",
           name: "contourLineThck",
           type: "select",
           options: ["1", "2", "3", "4", "5", "6", "7", "8"],
-          value: "1",
+          value: object.params.get("contourLineThck") || "1",
         },
         {
           label: "스무딩 레벨",
@@ -387,6 +364,12 @@ function layerListPanel() {
           type: "select",
           options: ["1", "2", "3", "4"],
           value: object.params.get("basicSmtLvl") || "1",
+        },
+        {
+          label: "평활 횟수",
+          name: "basicTotSmtLvl",
+          type: "text",
+          value: object.params.get("basicTotSmtLvl") || "5",
         },
       ];
     } else if (tabId === "oceanImg") {
@@ -473,10 +456,14 @@ function layerListPanel() {
     fields.forEach((field) => {
       const label = document.createElement("label");
       label.textContent = field.label;
-      const input =
-        field.type === "select"
-          ? createSelect(field.name, field.options, field.value)
-          : createInput(field.name, field.value);
+      let input;
+      if (field.type === "select") {
+        input = createSelect(field.name, field.options, field.value);
+      } else if (field.type === "color") {
+        input = createColorPicker(field.name, field.value);
+      } else {
+        input = createInput(field.name, field.value);
+      }
       form.appendChild(label);
       form.appendChild(input);
     });
@@ -486,9 +473,13 @@ function layerListPanel() {
     updateButton.type = "button";
     updateButton.addEventListener("click", async () => {
       const params = new FormData(form);
-      const updatedParams = new URLSearchParams(object.params); // 기존 params 유지
+      const updatedParams = new URLSearchParams(object.params);
       for (const [key, value] of params) {
-        updatedParams.set(key, value); // 새로운 값으로 업데이트
+        if (key == "contourLineColor" && value.startsWith("#")) {
+          updatedParams.set(key, "0x" + value.slice(1));
+        } else {
+          updatedParams.set(key, value);
+        }
       }
 
       const data = await fetchData(
@@ -497,7 +488,6 @@ function layerListPanel() {
       );
       if (data) {
         updateImageSrc(object, data, _self);
-        console.log("Updated params:", updatedParams.toString());
       }
     });
     form.appendChild(updateButton);
@@ -526,6 +516,54 @@ function layerListPanel() {
     return input;
   }
 
+  function createColorPicker(name, value) {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.id = "color-picker";
+    input.name = name;
+    input.value = "#" + value.slice(2) || "#0000ff";
+
+    const initializeSpectrum = () => {
+      if (typeof $(input).spectrum !== "function") {
+        return;
+      }
+
+      $(input).spectrum({
+        color: input.value,
+        showInitial: true,
+        showButtons: true,
+        type: "color",
+        showInput: true,
+        showAlpha: false,
+        allowEmpty: false,
+        preferredFormat: "hex",
+        // 색상표 표출
+        // showPalette: true,
+        // palette: [["#000", "#fff"]],
+        move: function (color) {
+          input.value = color.toHexString();
+        },
+        change: function (color) {
+          input.value = color.toHexString();
+        },
+      });
+    };
+
+    if (input.isConnected) {
+      initializeSpectrum();
+    } else {
+      const observer = new MutationObserver((mutations, obs) => {
+        if (document.body.contains(input)) {
+          initializeSpectrum();
+          obs.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    return input;
+  }
+
   async function fetchData(apiService, params) {
     const response = await apiService(params);
     return {
@@ -539,7 +577,7 @@ function layerListPanel() {
     reader.onload = function (e) {
       const newSrc = e.target.result;
       object.setSrc(newSrc, () => {
-        object.params = data.params; // Update params
+        object.params = data.params;
         _self.canvas.renderAll();
       });
     };

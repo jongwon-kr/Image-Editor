@@ -30,6 +30,8 @@ function canvas() {
           "noFocusing",
           "overlayImage",
           "label",
+          "params", // 적용안되는중
+          "apiType",  // 적용안되는중
         ]);
       };
     })(fabricCanvas.toJSON);
@@ -45,10 +47,16 @@ function canvas() {
     // Set up selection style
     fabric.Object.prototype.set({
       transparentCorners: false,
-      cornerStyle: "circle",
-      borderColor: "rgba(0, 120, 215, 0.3)",
-      cornerColor: "rgba(0, 120, 215, 0.8)",
-      cornerStrokeColor: "#ffffff",
+      cornerStyle: 'circle',
+      selectable: true,
+      evented: true,
+      hasControls: true,
+      hasBorders: true,
+      cornerSize: 10,
+      transparentCorners: false,
+      cornerColor: '#ffffff',
+      cornerStrokeColor: '#000000',
+      borderColor: '#555555'
     });
 
     // Selection events

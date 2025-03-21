@@ -27,6 +27,9 @@ async function retModelImgUrl(params) {
     isRasterFillCheck: "N",
     meta: "0",
     symbl: "1",
+    contourLineColor: "0x0000ff", // 선 색상
+    contourLineDiv: "A",  // 선 종류
+    contourLineThck: "1", // 선 두께
   };
 
   const mergedParams = new URLSearchParams({

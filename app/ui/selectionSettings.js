@@ -1011,6 +1011,117 @@ function selectionSettings() {
       });
   })();
   // end effect section
+
+  // 화살표 스타일 섹션 추가
+  (() => {
+    const selectPanelContent = document.querySelector(
+      `${this.containerSelector} .toolpanel#select-panel .content`
+    );
+    selectPanelContent.insertAdjacentHTML(
+      "beforeend",
+      `
+        <div class="arrow-section">
+          <h4>화살표 스타일</h4>
+          <div class="input-container">
+            <label>시작 화살표</label>
+            <input type="checkbox" id="show-start-arrow">
+          </div>
+          <div class="input-container">
+            <label>끝 화살표</label>
+            <input type="checkbox" id="show-end-arrow" checked>
+          </div>
+          <div class="input-container">
+            <label>화살표 스타일</label>
+            <select id="arrow-head-style">
+              <option value="filled">채워진 화살표</option>
+              <option value="outline">빈 화살표</option>
+            </select>
+          </div>
+          <hr>
+        </div>
+      `
+    );
+
+    // 화살표 섹션 이벤트 핸들러
+    const showStartArrow = document.querySelector(
+      `${this.containerSelector} .toolpanel#select-panel .arrow-section #show-start-arrow`
+    );
+    const showEndArrow = document.querySelector(
+      `${this.containerSelector} .toolpanel#select-panel .arrow-section #show-end-arrow`
+    );
+    const arrowHeadStyle = document.querySelector(
+      `${this.containerSelector} .toolpanel#select-panel .arrow-section #arrow-head-style`
+    );
+
+    showStartArrow.addEventListener("change", function() {
+      if (_self.activeSelection && _self.activeSelection.objectType === 'arrow') {
+        _self.activeSelection.showStartArrow = this.checked;
+        _self.canvas.renderAll();
+        _self.canvas.trigger("object:modified");
+      }
+    });
+
+    showEndArrow.addEventListener("change", function() {
+      if (_self.activeSelection && _self.activeSelection.objectType === 'arrow') {
+        _self.activeSelection.showEndArrow = this.checked;
+        _self.canvas.renderAll();
+        _self.canvas.trigger("object:modified");
+      }
+    });
+
+    arrowHeadStyle.addEventListener("change", function() {
+      if (_self.activeSelection && _self.activeSelection.objectType === 'arrow') {
+        _self.activeSelection.arrowHeadStyle = this.value;
+        _self.canvas.renderAll();
+        _self.canvas.trigger("object:modified");
+      }
+    });
+  })();
+
+  // 화살표 섹션 표시/숨김 처리를 위한 CSS 클래스 추가
+  document.querySelector(`${this.containerSelector} .toolpanel#select-panel .arrow-section`).style.display = 'none';
+
+  // 선택된 객체 타입에 따라 화살표 섹션 표시/숨김
+  const arrowSection = document.querySelector(`${this.containerSelector} .toolpanel#select-panel .arrow-section`);
+  if (_self.activeSelection && _self.activeSelection.objectType === 'arrow') {
+    arrowSection.style.display = 'block';
+  } else {
+    arrowSection.style.display = 'none';
+  }
+
+  // 선택된 객체의 타입에 따라 패널 클래스 업데이트
+  function updateSelectionType() {
+    const panel = document.querySelector(`${this.containerSelector} .toolpanel#select-panel`);
+    panel.classList.remove('type-textbox', 'type-image', 'type-polygon', 'type-activeSelection', 'type-group', 'type-arrow');
+    
+    if (this.activeSelection) {
+      console.log('Selected object type:', this.activeSelection.type);
+      console.log('Selected object objectType:', this.activeSelection.objectType);
+      
+      // 화살표 타입 체크 추가
+      if (this.activeSelection.type === 'arrow' || this.activeSelection.objectType === 'arrow') {
+        panel.classList.add('type-arrow');
+      } else {
+        panel.classList.add(`type-${this.activeSelection.type.toLowerCase()}`);
+      }
+    }
+  }
+
+  // 선택 이벤트에 updateSelectionType 연결
+  this.canvas.on('selection:created', () => {
+    this.activeSelection = this.canvas.getActiveObject();
+    updateSelectionType.call(this);
+  });
+
+  this.canvas.on('selection:updated', () => {
+    this.activeSelection = this.canvas.getActiveObject();
+    updateSelectionType.call(this);
+  });
+
+  this.canvas.on('selection:cleared', () => {
+    this.activeSelection = null;
+    updateSelectionType.call(this);
+  });
 }
 
 export { selectionSettings };

@@ -1,5 +1,6 @@
 import { shapes } from "./drawing-tools/shapes.js";
 import { lineDrawing } from "./drawing-tools/drawingLine.js";
+import { arrowDrawing } from "./drawing-tools/drawingArrow.js";
 import { pathDrawing } from "./drawing-tools/drawingPath.js";
 import { textBoxDrawing } from "./drawing-tools/drawingText.js";
 import { tipPanel } from "./ui/tip.js";
@@ -95,6 +96,7 @@ class ImageEditor {
     this.canvas.isDrawingPathMode = false;
     this.canvas.isDrawingMode = false;
     this.canvas.isDrawingTextMode = false;
+    this.canvas.isDrawingArrowMode = false;
     this.canvas.defaultCursor = "default";
     this.canvas.selection = true;
 
@@ -114,6 +116,15 @@ class ImageEditor {
         break;
       case "line":
         this.canvas.isDrawingLineMode = true;
+        this.canvas.defaultCursor = "crosshair";
+        this.canvas.selection = false;
+        this.canvas.forEachObject((o) => {
+          o.selectable = false;
+          o.evented = false;
+        });
+        break;
+      case "arrow":
+        this.canvas.isDrawingArrowMode = true;
         this.canvas.defaultCursor = "crosshair";
         this.canvas.selection = false;
         this.canvas.forEachObject((o) => {
@@ -229,6 +240,10 @@ class ImageEditor {
 
   initializeLineDrawing() {
     lineDrawing(this.canvas);
+  }
+
+  initializeArrowDrawing() {
+    arrowDrawing(this.canvas);
   }
 
   initializePathDrawing() {
@@ -363,6 +378,7 @@ class ImageEditor {
     this.initializeCopyPaste();
     this.initializeLayerListPanel();
     this.initializeLineDrawing();
+    this.initializeArrowDrawing();
     this.initializePathDrawing();
     this.initializeTextBoxDrawing();
     this.initializeWeatherData();

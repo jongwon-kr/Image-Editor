@@ -22,6 +22,7 @@ const buttons = [
   "shapes",
   "draw",
   "line",
+  "arrow",
   "path",
   "textbox",
   "weatherData",

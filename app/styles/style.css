@@ -12,6 +12,11 @@ body {
   height: 100%;
 }
 
+.title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
 .toolbar {
   line-height: 0;
   background-color: #f2f2f2;
@@ -716,6 +721,11 @@ input#input-zoom-level {
   opacity: 1;
 }
 
+.overlay-setting-form {
+  display: flex;
+  flex-direction: column;
+}
+
 .template-manager {
   display: flex;
   flex-direction: column;
@@ -894,9 +904,11 @@ input#input-zoom-level {
   opacity: 0;
   overflow: hidden;
   transition: max-height 0.2s ease-out, opacity 0.2s ease-out;
+  visibility: hidden;
 }
 
 #weatherData-panel .content .tab-content.active {
+  visibility: visible;
   max-height: 500px;
   opacity: 1;
 }
@@ -928,4 +940,42 @@ input#input-zoom-level {
   max-width: 300px;
   top: 14%;
   right: 300px;
+}
+
+/* 화살표 스타일 섹션 스타일 추가 */
+.toolpanel#select-panel .arrow-section {
+  margin-bottom: 20px;
+}
+
+.toolpanel#select-panel .arrow-section .input-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.toolpanel#select-panel .arrow-section .input-container label {
+  flex: 1;
+}
+
+.toolpanel#select-panel .arrow-section .input-container input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+}
+
+.toolpanel#select-panel .arrow-section .input-container select {
+  width: 50%;
+  height: 30px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 0 5px;
+}
+
+/* 화살표 섹션 기본적으로 숨김 */
+.toolpanel#select-panel .arrow-section {
+  display: none;
+}
+
+/* 화살표가 선택되었을 때만 표시 */
+.toolpanel#select-panel.type-arrow .arrow-section {
+  display: block;
 }
