@@ -244,7 +244,7 @@ async function alignObject(canvas, activeSelection, pos) {
   imgEditor.applyZoom(tempZoom);
   canvasElement.style.display = "block";
   canvas.renderAll();
-  canvas.trigger("object:modified");
+  canvas.fire("object:modified");
 }
 
 /**

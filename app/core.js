@@ -1,4 +1,4 @@
-import { shapes } from "./drawing-tools/shapes.js";
+import { initializeShapes } from "./drawing-tools/shapes.js";
 import { lineDrawing } from "./drawing-tools/drawingLine.js";
 import { arrowDrawing } from "./drawing-tools/drawingArrow.js";
 import { pathDrawing } from "./drawing-tools/drawingPath.js";
@@ -235,7 +235,7 @@ class ImageEditor {
   }
 
   initializeShapes() {
-    shapes.call(this);
+    initializeShapes(this);
   }
 
   initializeLineDrawing() {

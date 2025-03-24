@@ -153,7 +153,7 @@ function copyPaste(canvas) {
         }
 
         this.canvas.requestRenderAll();
-        this.canvas.trigger("object:modified");
+        this.canvas.fire("object:modified");
 
       } catch (err) {
         console.error("클립보드 접근 실패:", err);

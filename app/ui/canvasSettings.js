@@ -72,7 +72,7 @@ function canvasSettings() {
         _self.canvas.setHeight(height);
         _self.canvas.originalH = height;
         _self.canvas.renderAll();
-        _self.canvas.trigger("object:modified");
+        _self.canvas.fire("object:modified");
       } catch (_) {}
     };
 

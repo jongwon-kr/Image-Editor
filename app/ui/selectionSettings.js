@@ -123,13 +123,26 @@ const AlignmentButtonList = [
 
 function selectionSettings() {
   const _self = this;
+
+  // DOM 확인
   const mainPanel = document.querySelector(
     `${this.containerSelector} .main-panel`
   );
+  if (!mainPanel) {
+    console.error(
+      `Main panel not found for selector: ${this.containerSelector} .main-panel`
+    );
+    return;
+  }
   mainPanel.insertAdjacentHTML(
     "beforeend",
     `<div class="toolpanel" id="select-panel"><div class="content"><p class="title">선택 영역 설정</p></div></div>`
   );
+
+  if (!this.canvas) {
+    console.error("Canvas is not initialized");
+    return;
+  }
 
   // font section
   (() => {
@@ -278,7 +291,7 @@ function selectionSettings() {
             break;
         }
         _self.canvas.renderAll();
-        _self.canvas.trigger("object:modified");
+        _self.canvas.fire("object:modified");
       });
     });
 
@@ -289,7 +302,7 @@ function selectionSettings() {
       let family = this.value;
       setActiveFontStyle(_self.activeSelection, "fontFamily", family);
       _self.canvas.renderAll();
-      _self.canvas.trigger("object:modified");
+      _self.canvas.fire("object:modified");
     });
 
     const fontSizeInput = document.querySelectorAll(
@@ -301,7 +314,7 @@ function selectionSettings() {
         let type = this.id;
         setActiveFontStyle(_self.activeSelection, type, value);
         _self.canvas.renderAll();
-        _self.canvas.trigger("object:modified");
+        _self.canvas.fire("object:modified");
       });
     });
 
@@ -312,7 +325,7 @@ function selectionSettings() {
       let mode = this.value;
       setActiveFontStyle(_self.activeSelection, "textAlign", mode);
       _self.canvas.renderAll();
-      _self.canvas.trigger("object:modified");
+      _self.canvas.fire("object:modified");
     });
 
     // color picker 라이브러리가 Jquery로 구현되어 있어 예외적으로 Jquery로 작성
@@ -328,7 +341,7 @@ function selectionSettings() {
       .change(function () {
         let color = $(this).val();
         setActiveFontStyle(_self.activeSelection, "fill", color);
-        _self.canvas.renderAll(), _self.canvas.trigger("object:modified");
+        _self.canvas.renderAll(), _self.canvas.fire("object:modified");
       });
   })();
   // end font section
@@ -452,7 +465,7 @@ function selectionSettings() {
       }
 
       _self.canvas.renderAll();
-      _self.canvas.trigger("object:modified");
+      _self.canvas.fire("object:modified");
       console.log("Canvas updated with new sizes and selection");
     };
 
@@ -542,7 +555,7 @@ function selectionSettings() {
         _self.canvas
           .getActiveObjects()
           .forEach((obj) => obj.set("stroke", hex));
-        _self.canvas.renderAll(), _self.canvas.trigger("object:modified");
+        _self.canvas.renderAll(), _self.canvas.fire("object:modified");
       },
     });
 
@@ -558,7 +571,7 @@ function selectionSettings() {
         })
       );
       _self.canvas.renderAll();
-      _self.canvas.trigger("object:modified");
+      _self.canvas.fire("object:modified");
     });
 
     const borderStyleInput = document.querySelector(
@@ -575,7 +588,7 @@ function selectionSettings() {
           })
         );
         _self.canvas.renderAll();
-        _self.canvas.trigger("object:modified");
+        _self.canvas.fire("object:modified");
       } catch (_) {}
     });
 
@@ -588,7 +601,7 @@ function selectionSettings() {
         .getActiveObjects()
         .forEach((obj) => obj.set("strokeLineJoin", corner));
       _self.canvas.renderAll();
-      _self.canvas.trigger("object:modified");
+      _self.canvas.fire("object:modified");
     });
   })();
   // end border section
@@ -664,7 +677,7 @@ function selectionSettings() {
               .getActiveObjects()
               .forEach((obj) => obj.set("fill", color));
             _self.canvas.renderAll();
-            _self.canvas.trigger("object:modified");
+            _self.canvas.fire("object:modified");
           } catch (_) {
             console.log("can't update background color");
           }
@@ -696,7 +709,7 @@ function selectionSettings() {
         color && (hex = color.toRgbString()); // #ff0000
         _self.canvas.getActiveObjects().forEach((obj) => obj.set("fill", hex));
         _self.canvas.renderAll();
-        _self.canvas.trigger("object:modified");
+        _self.canvas.fire("object:modified");
       },
     });
 
@@ -842,7 +855,7 @@ function selectionSettings() {
       .addEventListener("click", () => {
         this.activeSelection.set("flipX", !this.activeSelection.flipX);
         this.canvas.renderAll();
-        this.canvas.trigger("object:modified");
+        this.canvas.fire("object:modified");
       });
 
     // Flip vertically
@@ -853,7 +866,7 @@ function selectionSettings() {
       .addEventListener("click", () => {
         this.activeSelection.set("flipY", !this.activeSelection.flipY);
         this.canvas.renderAll();
-        this.canvas.trigger("object:modified");
+        this.canvas.fire("object:modified");
       });
 
     // Bring forward
@@ -864,7 +877,7 @@ function selectionSettings() {
       .addEventListener("click", () => {
         this.canvas.bringForward(this.activeSelection);
         this.canvas.renderAll();
-        this.canvas.trigger("object:modified");
+        this.canvas.fire("object:modified");
       });
 
     // Send backwards
@@ -875,7 +888,7 @@ function selectionSettings() {
       .addEventListener("click", () => {
         this.canvas.sendBackwards(this.activeSelection);
         this.canvas.renderAll();
-        this.canvas.trigger("object:modified");
+        this.canvas.fire("object:modified");
       });
 
     // Duplicate
@@ -912,7 +925,7 @@ function selectionSettings() {
         }
 
         this.canvas.requestRenderAll();
-        this.canvas.trigger("object:modified");
+        this.canvas.fire("object:modified");
       });
 
     // Delete
@@ -925,7 +938,7 @@ function selectionSettings() {
           .getActiveObjects()
           .forEach((obj) => this.canvas.remove(obj));
         this.canvas.discardActiveObject().requestRenderAll();
-        this.canvas.trigger("object:modified");
+        this.canvas.fire("object:modified");
       });
 
     // Group
@@ -937,7 +950,7 @@ function selectionSettings() {
         if (this.activeSelection.type !== "activeSelection") return;
         this.canvas.getActiveObject().toGroup();
         this.canvas.requestRenderAll();
-        this.canvas.trigger("object:modified");
+        this.canvas.fire("object:modified");
       });
 
     // Ungroup
@@ -949,7 +962,7 @@ function selectionSettings() {
         if (this.activeSelection.type !== "group") return;
         this.canvas.getActiveObject().toActiveSelection();
         this.canvas.requestRenderAll();
-        this.canvas.trigger("object:modified");
+        this.canvas.fire("object:modified");
       });
   })();
   // end object options section
@@ -986,7 +999,7 @@ function selectionSettings() {
         let opacity = parseFloat(this.value);
         _self.activeSelection.set("opacity", opacity);
         _self.canvas.renderAll();
-        _self.canvas.trigger("object:modified");
+        _self.canvas.fire("object:modified");
       });
 
     // Effect change
@@ -1006,13 +1019,13 @@ function selectionSettings() {
           );
           _self.activeSelection.applyFilters();
           _self.canvas.renderAll();
-          _self.canvas.trigger("object:modified");
+          _self.canvas.fire("object:modified");
         });
       });
   })();
   // end effect section
 
-  // 화살표 스타일 섹션 추가
+  // 화살표 섹션
   (() => {
     const selectPanelContent = document.querySelector(
       `${this.containerSelector} .toolpanel#select-panel .content`
@@ -1020,29 +1033,28 @@ function selectionSettings() {
     selectPanelContent.insertAdjacentHTML(
       "beforeend",
       `
-        <div class="arrow-section">
-          <h4>화살표 스타일</h4>
-          <div class="input-container">
-            <label>시작 화살표</label>
-            <input type="checkbox" id="show-start-arrow">
-          </div>
-          <div class="input-container">
-            <label>끝 화살표</label>
-            <input type="checkbox" id="show-end-arrow" checked>
-          </div>
-          <div class="input-container">
-            <label>화살표 스타일</label>
-            <select id="arrow-head-style">
-              <option value="filled">채워진 화살표</option>
-              <option value="outline">빈 화살표</option>
-            </select>
-          </div>
-          <hr>
+      <div class="arrow-section">
+        <h4>화살표 스타일</h4>
+        <div class="input-container">
+          <label>시작 화살표</label>
+          <input type="checkbox" id="show-start-arrow">
         </div>
-      `
+        <div class="input-container">
+          <label>끝 화살표</label>
+          <input type="checkbox" id="show-end-arrow" checked>
+        </div>
+        <div class="input-container">
+          <label>화살표 스타일</label>
+          <select id="arrow-head-style">
+            <option value="filled">채워진 화살표</option>
+            <option value="outline">빈 화살표</option>
+          </select>
+        </div>
+        <hr>
+      </div>
+    `
     );
 
-    // 화살표 섹션 이벤트 핸들러
     const showStartArrow = document.querySelector(
       `${this.containerSelector} .toolpanel#select-panel .arrow-section #show-start-arrow`
     );
@@ -1053,75 +1065,157 @@ function selectionSettings() {
       `${this.containerSelector} .toolpanel#select-panel .arrow-section #arrow-head-style`
     );
 
-    showStartArrow.addEventListener("change", function() {
-      if (_self.activeSelection && _self.activeSelection.objectType === 'arrow') {
-        _self.activeSelection.showStartArrow = this.checked;
+    if (_self.activeSelection && _self.activeSelection.objectType === "arrow") {
+      showStartArrow.checked =
+        _self.activeSelection.startArrowHeadStyle !== "no-head";
+      showEndArrow.checked =
+        _self.activeSelection.endArrowHeadStyle !== "no-head";
+      arrowHeadStyle.value =
+        _self.activeSelection.endArrowHeadStyle === "filled-head"
+          ? "filled"
+          : "outline";
+    }
+
+    showStartArrow.addEventListener("change", function () {
+      if (
+        _self.activeSelection &&
+        _self.activeSelection.objectType === "arrow"
+      ) {
+        _self.activeSelection.startArrowHeadStyle = this.checked
+          ? arrowHeadStyle.value === "filled"
+            ? "filled-head"
+            : "no-head"
+          : "no-head";
+        _self.activeSelection._updateArrowHeads();
         _self.canvas.renderAll();
-        _self.canvas.trigger("object:modified");
+        _self.canvas.fire("object:modified");
       }
     });
 
-    showEndArrow.addEventListener("change", function() {
-      if (_self.activeSelection && _self.activeSelection.objectType === 'arrow') {
-        _self.activeSelection.showEndArrow = this.checked;
+    showEndArrow.addEventListener("change", function () {
+      if (
+        _self.activeSelection &&
+        _self.activeSelection.objectType === "arrow"
+      ) {
+        _self.activeSelection.endArrowHeadStyle = this.checked
+          ? arrowHeadStyle.value === "filled"
+            ? "filled-head"
+            : "no-head"
+          : "no-head";
+        _self.activeSelection._updateArrowHeads();
         _self.canvas.renderAll();
-        _self.canvas.trigger("object:modified");
+        _self.canvas.fire("object:modified");
       }
     });
 
-    arrowHeadStyle.addEventListener("change", function() {
-      if (_self.activeSelection && _self.activeSelection.objectType === 'arrow') {
-        _self.activeSelection.arrowHeadStyle = this.value;
+    arrowHeadStyle.addEventListener("change", function () {
+      if (
+        _self.activeSelection &&
+        _self.activeSelection.objectType === "arrow"
+      ) {
+        const style = this.value === "filled" ? "filled-head" : "no-head";
+        _self.activeSelection.startArrowHeadStyle = showStartArrow.checked
+          ? style
+          : "no-head";
+        _self.activeSelection.endArrowHeadStyle = showEndArrow.checked
+          ? style
+          : "no-head";
+        _self.activeSelection._updateArrowHeads();
         _self.canvas.renderAll();
-        _self.canvas.trigger("object:modified");
+        _self.canvas.fire("object:modified");
       }
     });
   })();
 
   // 화살표 섹션 표시/숨김 처리를 위한 CSS 클래스 추가
-  document.querySelector(`${this.containerSelector} .toolpanel#select-panel .arrow-section`).style.display = 'none';
+  document.querySelector(
+    `${this.containerSelector} .toolpanel#select-panel .arrow-section`
+  ).style.display = "none";
 
   // 선택된 객체 타입에 따라 화살표 섹션 표시/숨김
-  const arrowSection = document.querySelector(`${this.containerSelector} .toolpanel#select-panel .arrow-section`);
-  if (_self.activeSelection && _self.activeSelection.objectType === 'arrow') {
-    arrowSection.style.display = 'block';
+  const arrowSection = document.querySelector(
+    `${this.containerSelector} .toolpanel#select-panel .arrow-section`
+  );
+  if (_self.activeSelection && _self.activeSelection.objectType === "arrow") {
+    arrowSection.style.display = "block";
   } else {
-    arrowSection.style.display = 'none';
+    arrowSection.style.display = "none";
   }
 
-  // 선택된 객체의 타입에 따라 패널 클래스 업데이트
-  function updateSelectionType() {
-    const panel = document.querySelector(`${this.containerSelector} .toolpanel#select-panel`);
-    panel.classList.remove('type-textbox', 'type-image', 'type-polygon', 'type-activeSelection', 'type-group', 'type-arrow');
-    
+  // 패널 표시/숨김 업데이트 함수
+  function updatePanelVisibility() {
+    const panel = document.querySelector(
+      `${this.containerSelector} .toolpanel#select-panel`
+    );
+    const arrowSection = document.querySelector(
+      `${this.containerSelector} .toolpanel#select-panel .arrow-section`
+    );
+    if (!panel) return;
+
     if (this.activeSelection) {
-      console.log('Selected object type:', this.activeSelection.type);
-      console.log('Selected object objectType:', this.activeSelection.objectType);
-      
-      // 화살표 타입 체크 추가
-      if (this.activeSelection.type === 'arrow' || this.activeSelection.objectType === 'arrow') {
-        panel.classList.add('type-arrow');
+      panel.style.display = "block";
+      if (
+        this.activeSelection.objectType === "arrow" ||
+        this.activeSelection.type === "arrow"
+      ) {
+        arrowSection.style.display = "block";
+      } else {
+        arrowSection.style.display = "none";
+      }
+    } else {
+      panel.style.display = "none";
+    }
+  }
+
+  // 선택 타입 업데이트
+  function updateSelectionType() {
+    const panel = document.querySelector(
+      `${this.containerSelector} .toolpanel#select-panel`
+    );
+    if (!panel) return;
+
+    panel.classList.remove(
+      "type-textbox",
+      "type-image",
+      "type-polygon",
+      "type-activeSelection",
+      "type-group",
+      "type-arrow"
+    );
+
+    if (this.activeSelection) {
+      if (
+        this.activeSelection.type === "arrow" ||
+        this.activeSelection.objectType === "arrow"
+      ) {
+        panel.classList.add("type-arrow");
       } else {
         panel.classList.add(`type-${this.activeSelection.type.toLowerCase()}`);
       }
     }
   }
 
-  // 선택 이벤트에 updateSelectionType 연결
-  this.canvas.on('selection:created', () => {
+  // 이벤트 연결
+  this.canvas.on("selection:created", () => {
     this.activeSelection = this.canvas.getActiveObject();
     updateSelectionType.call(this);
+    updatePanelVisibility.call(this);
   });
 
-  this.canvas.on('selection:updated', () => {
+  this.canvas.on("selection:updated", () => {
     this.activeSelection = this.canvas.getActiveObject();
     updateSelectionType.call(this);
+    updatePanelVisibility.call(this);
   });
 
-  this.canvas.on('selection:cleared', () => {
+  this.canvas.on("selection:cleared", () => {
     this.activeSelection = null;
     updateSelectionType.call(this);
+    updatePanelVisibility.call(this);
   });
+
+  // 초기 상태 설정
+  updatePanelVisibility.call(this);
 }
 
 export { selectionSettings };

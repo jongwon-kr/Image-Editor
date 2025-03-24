@@ -3,6 +3,7 @@ import {
   getFilteredFocusObjects,
   getFilteredNoFocusObjects,
 } from "../utils/utils.js";
+
 /**
  * 캔버스
  */
@@ -19,10 +20,8 @@ function canvas() {
       `<div class="canvas-holder" id="canvas-holder"><div class="content"><canvas id="c"></canvas></div></div>`
     );
 
-    // Initialize Fabric.js canvas
     const fabricCanvas = new fabric.Canvas("c").setDimensions(this.dimensions);
 
-    // 속성 직렬화 -> undo/redo시 객체의 속성 초기화 문제
     fabricCanvas.toJSON = (function (originalFn) {
       return function (propertiesToInclude) {
         return originalFn.call(this, [
@@ -30,8 +29,9 @@ function canvas() {
           "noFocusing",
           "overlayImage",
           "label",
-          "params", // 적용안되는중
-          "apiType",  // 적용안되는중
+          "params",
+          "apiType",
+          "isControlPoint", // 추가
         ]);
       };
     })(fabricCanvas.toJSON);
@@ -44,40 +44,45 @@ function canvas() {
     fabricCanvas.selectionBorderColor = "rgba(0, 120, 215, 0.8)";
     fabricCanvas.selectionLineWidth = 1.2;
 
-    // Set up selection style
     fabric.Object.prototype.set({
       transparentCorners: false,
-      cornerStyle: 'circle',
+      cornerStyle: "circle",
       selectable: true,
       evented: true,
       hasControls: true,
       hasBorders: true,
       cornerSize: 10,
-      transparentCorners: false,
-      cornerColor: '#ffffff',
-      cornerStrokeColor: '#000000',
-      borderColor: '#555555'
+      cornerColor: "#ffffff",
+      cornerStrokeColor: "#000000",
+      borderColor: "#555555",
     });
 
-    // Selection events
     fabricCanvas.on("selection:created", (e) => {
-      if (e.target && !e.target.isControlPoint) {
-        this.setActiveSelection(e.target);
-        fabricCanvas.trigger("object:modified");
-      }
-    });
-    fabricCanvas.on("selection:updated", (e) => {
-      if (e.target && !e.target.isControlPoint) {
-        this.setActiveSelection(e.target);
-        fabricCanvas.trigger("object:modified");
+      console.log("selection:created - e.target:", e.target); // 디버깅용
+      if (e.target) {
+        if (!e.target.isControlPoint) {
+          console.log("Selected non-control object:", e.target);
+          this.setActiveSelection(e.target);
+          fabricCanvas.fire("object:modified");
+        } else {
+          console.log("Selected control point:", e.target.name);
+        }
+      } else {
+        console.log("e.target is undefined in selection:created");
       }
     });
 
-    // Guide lines array to manage them
+    fabricCanvas.on("selection:updated", (e) => {
+      console.log("selection:updated - e.target:", e.target); // 디버깅용
+      if (e.target && !e.target.isControlPoint) {
+        this.setActiveSelection(e.target);
+        fabricCanvas.fire("object:modified");
+      }
+    });
+
     let guideLines = [];
     let isSnapping = false;
 
-    // Snap to angle on rotate with Shift key
     fabricCanvas.on("object:rotating", (e) => {
       isSnapping = true;
       if (e.e.shiftKey) {
@@ -88,19 +93,17 @@ function canvas() {
       isSnapping = false;
     });
 
-    // Function to remove all guide lines
     const removeGuideLines = () => {
       guideLines.forEach((line) => fabricCanvas.remove(line));
       guideLines = [];
       fabricCanvas.renderAll();
     };
 
-    // Function to add a guide line
     const addGuideLine = (x1, y1, x2, y2) => {
       const line = new fabric.Line([x1, y1, x2, y2], {
         stroke: "rgba(0, 120, 215, 0.8)",
         strokeWidth: 1,
-        strokeDashArray: [5, 5], // Dashed line
+        strokeDashArray: [5, 5],
         selectable: false,
         evented: false,
         excludeFromExport: true,
@@ -110,12 +113,10 @@ function canvas() {
       guideLines.push(line);
     };
 
-    // Snap to center and edges while moving
     fabricCanvas.on("object:moving", (e) => {
       if (isSnapping) return;
       const obj = e.target;
-      
-      // 제어점인 경우 스냅 기능 건너뛰기
+
       if (obj.isControlPoint) {
         return;
       }
@@ -124,13 +125,12 @@ function canvas() {
       const canvasHeight = fabricCanvas.originalH;
       const snapThreshold = 5;
 
-      // 필터링할 때 제어점 제외
-      let objects = getFilteredNoFocusObjects().filter(obj => !obj.isControlPoint);
-      
-      // Remove existing guide lines before recalculating
+      let objects = getFilteredNoFocusObjects().filter(
+        (obj) => !obj.isControlPoint
+      );
+
       removeGuideLines();
 
-      // Get object bounds
       const objWidth = obj.getScaledWidth();
       const objHeight = obj.getScaledHeight();
       const objLeft = obj.left;
@@ -138,58 +138,44 @@ function canvas() {
       const objCenterX = objLeft + objWidth / 2;
       const objCenterY = objTop + objHeight / 2;
 
-      // Canvas center points
       const canvasCenterX = canvasWidth / 2;
       const canvasCenterY = canvasHeight / 2;
 
-      // Snap to horizontal center
       if (Math.abs(objCenterX - canvasCenterX) < snapThreshold) {
-        obj.set({
-          left: canvasCenterX - objWidth / 2,
-        });
-        addGuideLine(canvasCenterX, 0, canvasCenterX, canvasHeight); // Vertical guide line
+        obj.set({ left: canvasCenterX - objWidth / 2 });
+        addGuideLine(canvasCenterX, 0, canvasCenterX, canvasHeight);
       }
 
-      // Snap to vertical center
       if (Math.abs(objCenterY - canvasCenterY) < snapThreshold) {
-        obj.set({
-          top: canvasCenterY - objHeight / 2,
-        });
-        addGuideLine(0, canvasCenterY, canvasWidth, canvasCenterY); // Horizontal guide line
+        obj.set({ top: canvasCenterY - objHeight / 2 });
+        addGuideLine(0, canvasCenterY, canvasWidth, canvasCenterY);
       }
 
-      // Snap to edges
-      // Left edge
       if (Math.abs(objLeft) < snapThreshold) {
         obj.set({ left: 0 });
-        addGuideLine(0, 0, 0, canvasHeight); // Left vertical guide
+        addGuideLine(0, 0, 0, canvasHeight);
       }
-      // Right edge
       if (Math.abs(objLeft + objWidth - canvasWidth) < snapThreshold) {
         obj.set({ left: canvasWidth - objWidth });
-        addGuideLine(canvasWidth - 1, 0, canvasWidth - 1, canvasHeight); // Right vertical guide
+        addGuideLine(canvasWidth - 1, 0, canvasWidth - 1, canvasHeight);
       }
-      // Top edge
       if (Math.abs(objTop) < snapThreshold) {
         obj.set({ top: 0 });
-        addGuideLine(0, 0, canvasWidth, 0); // Top horizontal guide
+        addGuideLine(0, 0, canvasWidth, 0);
       }
-      // Bottom edge
       if (Math.abs(objTop + objHeight - canvasHeight) < snapThreshold) {
         obj.set({ top: canvasHeight - objHeight });
-        addGuideLine(0, canvasHeight - 1, canvasWidth, canvasHeight - 1); // Bottom horizontal guide
+        addGuideLine(0, canvasHeight - 1, canvasWidth, canvasHeight - 1);
       }
 
-      obj.setCoords(); // Update object coordinates
+      obj.setCoords();
       fabricCanvas.renderAll();
     });
 
-    // Clear guide lines when movement stops
     fabricCanvas.on("mouse:up", () => {
       removeGuideLines();
     });
 
-    // Track modifications for undo/redo
     fabricCanvas.on("object:modified", () => {
       console.log("fire: modified");
       let objects = fabricCanvas.getObjects().filter((obj) => obj.noFocusing);
@@ -202,11 +188,9 @@ function canvas() {
       this.history.push(JSON.stringify(currentState));
     });
 
-    // Load saved canvas state if available
     const savedCanvas = load("canvasEditor");
     if (savedCanvas) {
       fabricCanvas.loadFromJSON(savedCanvas, () => {
-        // 로드 후 객체 속성 복원
         fabricCanvas.getObjects().forEach((obj) => {
           if (obj.noFocusing) {
             obj.selectable = false;
@@ -220,15 +204,12 @@ function canvas() {
     document.addEventListener("keydown", (e) => {
       if (e.ctrlKey && e.key.toLowerCase() === "a") {
         e.preventDefault();
-
         const objects = getFilteredFocusObjects();
         const activeObjects = fabricCanvas.getActiveObjects();
-        if (objects.length == activeObjects.length) return;
+        if (objects.length === activeObjects.length) return;
 
         if (objects.length > 0) {
-          objects.forEach((obj) => {
-            fabricCanvas.setActiveObject(obj);
-          });
+          objects.forEach((obj) => fabricCanvas.setActiveObject(obj));
           const selection = new fabric.ActiveSelection(objects, {
             canvas: fabricCanvas,
           });
@@ -242,31 +223,21 @@ function canvas() {
       if (e.ctrlKey && e.key.toLowerCase() === "s") {
         e.preventDefault();
         save("canvasEditor", fabricCanvas.toJSON());
-
         const saveMessage = document.createElement("div");
         saveMessage.textContent = "저장되었습니다";
         saveMessage.className = "message";
-
         document.body.appendChild(saveMessage);
-
-        setTimeout(() => {
-          saveMessage.style.opacity = "1";
-        }, 10);
-
+        setTimeout(() => (saveMessage.style.opacity = "1"), 10);
         setTimeout(() => {
           saveMessage.style.opacity = "0";
-          setTimeout(() => {
-            saveMessage.remove();
-          }, 300);
+          setTimeout(() => saveMessage.remove(), 300);
         }, 600);
       }
     });
 
-    // Move objects with arrow keys
     document.addEventListener("keydown", (e) => {
       const key = e.which || e.keyCode;
       let activeObject;
-
       if (document.querySelectorAll("textarea:focus, input:focus").length > 0)
         return;
 
@@ -276,15 +247,10 @@ function canvas() {
         if (!activeObject) return;
       }
 
-      if (key === 37) {
-        activeObject.left -= 1; // Left arrow
-      } else if (key === 39) {
-        activeObject.left += 1; // Right arrow
-      } else if (key === 38) {
-        activeObject.top -= 1; // Up arrow
-      } else if (key === 40) {
-        activeObject.top += 1; // Down arrow
-      }
+      if (key === 37) activeObject.left -= 1;
+      else if (key === 39) activeObject.left += 1;
+      else if (key === 38) activeObject.top -= 1;
+      else if (key === 40) activeObject.top += 1;
 
       if (key === 37 || key === 38 || key === 39 || key === 40) {
         activeObject.setCoords();
@@ -293,7 +259,6 @@ function canvas() {
       }
     });
 
-    // Delete object with Delete key
     document.addEventListener("keydown", (e) => {
       const key = e.which || e.keyCode;
       if (
@@ -308,24 +273,19 @@ function canvas() {
       }
     });
 
-    // Save initial state after a delay
     setTimeout(() => {
       const currentState = fabricCanvas.toJSON();
       this.history.push(JSON.stringify(currentState));
     }, 1000);
 
-    // create footer bar
     mainPanel.insertAdjacentHTML(
       "afterend",
       '<div id="footer-bar" class="toolbar"></div>'
     );
 
-    // 제어점이 다른 객체 위로 드래그될 때도 이동 가능하도록 수정
-    fabricCanvas.on('mouse:down', function(options) {
+    fabricCanvas.on("mouse:down", function (options) {
       if (!options.target) return;
-      
       if (options.target.isControlPoint) {
-        // 제어점인 경우 다른 객체와의 상호작용 방지
         options.target.bringToFront();
         fabricCanvas.setActiveObject(options.target);
         fabricCanvas.renderAll();
@@ -333,8 +293,7 @@ function canvas() {
       }
     });
 
-    // 제어점 이동 시 다른 객체와의 상호작용 방지
-    fabricCanvas.on('mouse:over', function(e) {
+    fabricCanvas.on("mouse:over", function (e) {
       if (e.target && e.target.isControlPoint) {
         e.target.bringToFront();
       }

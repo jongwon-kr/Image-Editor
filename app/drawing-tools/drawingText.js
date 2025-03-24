@@ -76,7 +76,7 @@ function textBoxDrawing(fabricCanvas) {
     textbox.setControlsVisibility({
       mb: false,
     });
-    fabricCanvas.trigger("object:modified");
+    fabricCanvas.fire("object:modified");
   });
 }
 

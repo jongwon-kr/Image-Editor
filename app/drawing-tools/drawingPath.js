@@ -238,7 +238,7 @@ function pathDrawing(fabricCanvas) {
     }
 
     fabricCanvas.renderAll();
-    fabricCanvas.trigger("object:modified");
+    fabricCanvas.fire("object:modified");
 
     pathToDraw = null;
     isDrawingPath = false;

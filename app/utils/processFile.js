@@ -43,7 +43,7 @@ function processFiles(files) {
               .setCoords();
             canvas.add(obj);
             canvas.renderAll();
-            canvas.trigger("object:modified");
+            canvas.fire("object:modified");
 
             pending--;
             if (pending === 0) resolve(fileList);
@@ -63,7 +63,7 @@ function processFiles(files) {
 
             canvas.add(img);
             canvas.renderAll();
-            canvas.trigger("object:modified");
+            canvas.fire("object:modified");
 
             pending--;
             if (pending === 0) resolve(fileList);
