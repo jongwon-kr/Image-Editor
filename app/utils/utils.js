@@ -453,6 +453,14 @@ function getOverlayImages() {
   return objects;
 }
 
+// 제어점 객체 추출
+function getControlPoint() {
+  let objects = imgEditor.canvas
+    .getObjects()
+    .filter((obj) => obj.isControlPoint);
+  return objects;
+}
+
 export {
   generateFabricGradientFromColorStops,
   getRealBBox,

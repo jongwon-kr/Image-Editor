@@ -39,7 +39,7 @@ function canvas() {
     fabricCanvas.originalW = fabricCanvas.width;
     fabricCanvas.originalH = fabricCanvas.height;
     fabricCanvas.backgroundColor = "#ffffff";
-
+    fabricCanvas.preserveObjectStacking = true;
     fabricCanvas.selectionColor = "rgba(0, 120, 215, 0.2)";
     fabricCanvas.selectionBorderColor = "rgba(0, 120, 215, 0.8)";
     fabricCanvas.selectionLineWidth = 1.2;
@@ -204,7 +204,9 @@ function canvas() {
     document.addEventListener("keydown", (e) => {
       if (e.ctrlKey && e.key.toLowerCase() === "a") {
         e.preventDefault();
-        const objects = getFilteredFocusObjects();
+        const objects = getFilteredFocusObjects().filter(
+          (obj) => !obj.isControlPoint
+        );
         const activeObjects = fabricCanvas.getActiveObjects();
         if (objects.length === activeObjects.length) return;
 

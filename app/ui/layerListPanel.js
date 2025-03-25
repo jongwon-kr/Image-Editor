@@ -53,7 +53,9 @@ function layerListPanel() {
       `${_self.containerSelector} #layer-inner-list`
     );
     layerList.innerHTML = "";
-    let objects = getFilteredFocusObjects();
+    let objects = getFilteredFocusObjects().filter(
+      (obj) => !obj.isControlPoint
+    );
     if (layerType === "overlay") {
       objects = getOverlayImages();
     }

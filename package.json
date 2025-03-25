@@ -17,7 +17,7 @@
       "webpack": "^5.75.0",
       "webpack-cli": "^6.0.1",
       "webpack-dev-server": "^4.7.4",
-      "fabric": "3.6.3"
+      "fabric": "5.3.0"
     },
     "author": "Taiho"
   }
