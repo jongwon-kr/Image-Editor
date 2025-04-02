@@ -43,10 +43,9 @@ const Shapes = [
 
 const categories = [{ name: "도형", values: Shapes }];
 
-// stamps.json 데이터를 전역 categories에 추가하는 함수
 async function loadStampsData() {
   try {
-    const response = await fetch("/json/stamps.json");
+    const response = await fetch("/ias/js/wgc/json/stamps.json");
     const data = await response.json();
     categories.push({ name: "일기도 기호", values: data["일기도 기호"] });
     categories.push({ name: "날씨 기호", values: data["날씨 기호"] });
@@ -120,7 +119,21 @@ function shapes() {
               obj.strokeLineJoin = "miter";
               obj.scaleToWidth(100);
               obj.scaleToHeight(100);
-              obj.set({ left: 0, top: 0 });
+
+              // 뷰포트 기준 중심 계산
+              const vpt = _self.canvas.viewportTransform;
+              const zoom = vpt[0]; // 줌 레벨
+              const canvasWidth = _self.canvas.width / zoom;
+              const canvasHeight = _self.canvas.height / zoom;
+              const centerX = canvasWidth / 2 - vpt[4] / zoom;
+              const centerY = canvasHeight / 2 - vpt[5] / zoom;
+
+              obj.set({
+                left: centerX,
+                top: centerY,
+              });
+
+              _self.canvas.setActiveObject(obj);
               _self.canvas.add(obj).renderAll();
               _self.canvas.fire("object:modified");
             });
@@ -129,7 +142,6 @@ function shapes() {
           }
         });
       } else if (item.src) {
-        // stamps.json에서 가져온 이미지 처리
         const img = document.createElement("img");
         img.src = item.src;
         img.style.width = "42px";
@@ -141,7 +153,21 @@ function shapes() {
             fabric.Image.fromURL(item.src, (imgObj) => {
               imgObj.scaleToWidth(100);
               imgObj.scaleToHeight(100);
-              imgObj.set({ left: 0, top: 0 });
+
+              const vpt = _self.canvas.viewportTransform;
+              const zoom = vpt[0]; // 줌 레벨
+              const canvasWidth = _self.canvas.width / zoom;
+              const canvasHeight = _self.canvas.height / zoom;
+              const centerX = canvasWidth / 2 - vpt[4] / zoom;
+              const centerY = canvasHeight / 2 - vpt[5] / zoom;
+
+              imgObj.set({
+                left: centerX,
+                top: centerY,
+              });
+
+              console.log("imgObj", imgObj);
+              _self.canvas.setActiveObject(imgObj);
               _self.canvas.add(imgObj).renderAll();
               _self.canvas.fire("object:modified");
             });
@@ -159,10 +185,9 @@ function shapes() {
   content.appendChild(categoryList);
 }
 
-// stamps.json 데이터를 로드한 후 shapes 함수를 실행
 async function initializeShapes(context) {
-  await loadStampsData(); // 데이터 로드 완료 대기
-  shapes.call(context); // shapes 함수 실행
+  await loadStampsData();
+  shapes.call(context);
 }
 
 export { shapes, initializeShapes };

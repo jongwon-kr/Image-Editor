@@ -94,11 +94,13 @@ function images() {
   });
 
   const openShareGalleryTab = document.createElement("div");
+  openShareGalleryTab.classList.add("template-manager-top");
   content.appendChild(openShareGalleryTab);
 
   const openShareGalleryButton = document.createElement("button");
   openShareGalleryButton.classList.add("open-share-gallery-button");
-  openShareGalleryButton.textContent = "공유 저장소";
+  openShareGalleryButton.classList.add("btn_g");
+  openShareGalleryButton.textContent = "이미지 저장소 관리";
   openShareGalleryButton.addEventListener("click", function () {
     openShareGallery();
   });
@@ -174,7 +176,7 @@ function images() {
     const modalHeader = document.createElement("div");
     modalHeader.classList.add("modal-header");
 
-    const modalLabel = document.createElement("h4");
+    const modalLabel = document.createElement("h3");
     modalLabel.classList.add("modal-label");
     modalLabel.textContent = "이미지 저장소";
     modalHeader.appendChild(modalLabel);
@@ -192,6 +194,7 @@ function images() {
     categories.forEach((category) => {
       const selectCategoryButton = document.createElement("button");
       selectCategoryButton.classList.add("select-category-button");
+      selectCategoryButton.classList.add("btn_w");
       selectCategoryButton.textContent = category.label;
       selectCategoryButton.id = category.name;
 
@@ -222,6 +225,7 @@ function images() {
     const closeButton = document.createElement("button");
     closeButton.textContent = "닫기";
     closeButton.classList.add("close-modal-button");
+    closeButton.classList.add("btn_g");
     closeButton.addEventListener("click", closeShareGallery);
     modalFooter.appendChild(closeButton);
 
@@ -257,23 +261,27 @@ function images() {
       const saveButton = document.createElement("button");
       saveButton.textContent = "저장";
       saveButton.classList.add("save-button");
+      saveButton.classList.add("btn_w");
       saveButton.addEventListener("click", () => saveImage(img));
 
       const deleteButton = document.createElement("button");
       deleteButton.textContent = "삭제";
       deleteButton.classList.add("delete-button");
+      deleteButton.classList.add("btn_w");
       deleteButton.addEventListener("click", () => deleteImage(img));
 
       // 다운로드 버튼
       const downloadButton = document.createElement("button");
       downloadButton.textContent = "다운로드";
       downloadButton.classList.add("download-button");
+      downloadButton.classList.add("btn_w");
       downloadButton.addEventListener("click", () => downloadImage(img));
 
       // 공유 버튼
       const shareButton = document.createElement("button");
       shareButton.textContent = "공유";
       shareButton.classList.add("share-button");
+      shareButton.classList.add("btn_w");
       shareButton.addEventListener("click", () => shareImage(img));
 
       imageWrapper.appendChild(imgElement);

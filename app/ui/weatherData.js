@@ -21,6 +21,14 @@ function weatherData() {
   title.classList.add("title");
   title.textContent = "기상 자료";
   content.appendChild(title);
+
+  // 필요한 요소 생성
+  const inputContainer = document.createElement('div');
+  inputContainer.className = 'input-container';
+
+  const label = document.createElement('label');
+  label.textContent = '영역 선택';
+
   const options = [
     {
       label: "동아시아",
@@ -64,7 +72,9 @@ function weatherData() {
     selectedMapArea.ZOOMLVL = selectedArea.ZOOMLVL;
   });
 
-  content.appendChild(selectBackgroundMapArea);
+  inputContainer.appendChild(label);
+  inputContainer.appendChild(selectBackgroundMapArea);
+  content.appendChild(inputContainer);
 
   // 탭 컨테이너
   const tabContainer = document.createElement("div");
@@ -95,6 +105,7 @@ function weatherData() {
     const tabButton = document.createElement("button");
     tabButton.textContent = tab.label;
     tabButton.classList.add("tab-button");
+    tabButton.classList.add("btn_w");
     tabButton.id = `${tab.id}-button`;
 
     const tabContent = document.createElement("div");
@@ -263,6 +274,7 @@ function createForm(tabId, apiService, _self) {
   });
 
   const addButton = document.createElement("button");
+  addButton.classList.add("btn_g");
   addButton.textContent = "추가";
   addButton.type = "button";
   addButton.addEventListener("click", async () => {

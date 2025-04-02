@@ -32,6 +32,7 @@ function layerListPanel() {
   selectObjectTypeButton.id = "select-object-type-button";
   selectObjectTypeButton.value = "object";
   selectObjectTypeButton.textContent = "요소 레이어";
+  selectObjectTypeButton.classList.add("btn_w");
   selectObjectTypeButton.addEventListener("click", function () {
     layerType = this.value;
     updateLayers();
@@ -42,6 +43,7 @@ function layerListPanel() {
   selectOverlayTypeButton.id = "select-overlay-type-button";
   selectOverlayTypeButton.value = "overlay";
   selectOverlayTypeButton.textContent = "중첩 자료 레이어";
+  selectOverlayTypeButton.classList.add("btn_w");
   selectOverlayTypeButton.addEventListener("click", function () {
     layerType = this.value;
     updateLayers();
@@ -59,7 +61,6 @@ function layerListPanel() {
     if (layerType === "overlay") {
       objects = getOverlayImages();
     }
-    _self.canvas.renderAll();
 
     objects.forEach((object, index) => {
       if (!object.id) {
@@ -80,10 +81,10 @@ function layerListPanel() {
             <div class="layer-name">
               <input class="layer-custom-name" value="${label}">
               <div class="layer-options">
-                <button class="open-setting" title="설정">S</button>
-                <button class="move-up" title="위로 올리기">↑</button>
-                <button class="move-down" title="내리기">↓</button>
-                <button class="hide-object" title="숨기기">H</button>
+                <button class="open-setting btn_w" title="설정">S</button>
+                <button class="move-up btn_w" title="위로 올리기">↑</button>
+                <button class="move-down btn_w" title="내리기">↓</button>
+                <button class="hide-object btn_w" title="숨기기">H</button>
               </div>
             </div>
           </div>

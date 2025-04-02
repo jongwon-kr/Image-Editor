@@ -3,7 +3,6 @@ import { imgEditor } from "../index.js";
 /**
  * jpg, png, svg 파일 처리
  */
-
 function processFiles(files) {
   return new Promise((resolve) => {
     // files가 유효한지 확인
@@ -21,8 +20,12 @@ function processFiles(files) {
     const allowedTypes = ["image/jpeg", "image/png", "image/svg+xml"];
     let pending = files.length;
 
+    const canvasWidth = canvas.originalW;
+    const canvasHeight = canvas.originalH;
+    const centerX = canvasWidth / 2;
+    const centerY = canvasHeight / 2;
+
     for (let file of files) {
-      // file이 Blob 또는 File 타입인지 확인
       if (!(file instanceof Blob) || !allowedTypes.includes(file.type)) {
         console.warn("유효하지 않은 파일:", file);
         pending--;
@@ -39,9 +42,14 @@ function processFiles(files) {
             pushToFileList(obj, file, f.target.result);
 
             obj
-              .set({ left: 0, top: 0 })
+              .set({
+                left: centerX,
+                top: centerY,
+              })
               .setCoords();
+
             canvas.add(obj);
+            canvas.setActiveObject(obj);
             canvas.renderAll();
             canvas.fire("object:modified");
 
@@ -55,13 +63,17 @@ function processFiles(files) {
           fabric.Image.fromURL(f.target.result, (img) => {
             pushToFileList(img, file, f.target.result);
 
-            img
-              .set({ left: 0, top: 0 })
-              .setCoords();
             img.scaleToHeight(300);
             img.scaleToWidth(300);
+            img
+              .set({
+                left: centerX,
+                top: centerY,
+              })
+              .setCoords();
 
             canvas.add(img);
+            canvas.setActiveObject(img);
             canvas.renderAll();
             canvas.fire("object:modified");
 
@@ -84,7 +96,7 @@ function processFiles(files) {
           type: f.type,
           size: f.size,
           lastModified: f.lastModified,
-          data: fileData, // 파일 데이터를 Data URL로 저장
+          data: fileData,
         },
         timestamp: new Date().getTime(),
       };

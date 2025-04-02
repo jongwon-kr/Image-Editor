@@ -10,7 +10,7 @@ export default {
   entry: "./app/index.js",
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "[name].graphic-cast.js", // [name]을 추가해 청크별 고유 이름 생성
+    filename: "[name].graphic-cast.js",
     sourceMapFilename: "[file].map",
   },
   devtool: "source-map",
@@ -58,7 +58,10 @@ export default {
       template: "./index.html",
     }),
     new CopyWebpackPlugin({
-      patterns: [{ from: "vendor", to: "vendor" }],
+      patterns: [
+        { from: "vendor", to: "vendor" }, // 기존 vendor 폴더 복사
+        { from: "public", to: "public" }, // public 폴더를 dist/public으로 복사
+      ],
     }),
     new MiniCssExtractPlugin({
       filename: "graphic-cast.css",

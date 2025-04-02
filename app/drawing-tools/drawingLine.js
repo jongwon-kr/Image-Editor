@@ -1,5 +1,8 @@
+import { getControlPoint } from "../utils/utils.js";
+
 function lineDrawing(fabricCanvas) {
   let isDrawingLine = false;
+  let isControl = false;
   let lineToDraw = null;
   let pointerPoints;
 
@@ -24,6 +27,14 @@ function lineDrawing(fabricCanvas) {
         evented: false,
         objectCaching: false,
         isControlPoint: false,
+        // 빛나는 효과 추가
+        shadow: new fabric.Shadow({
+          color: "rgb(255, 255, 255)",
+          blur: 15,
+          offsetX: 0,
+          offsetY: 0,
+          affectStroke: true, // 선에 그림자 효과 적용
+        }),
       }
     );
     fabricCanvas.add(lineToDraw);
@@ -56,7 +67,13 @@ function lineDrawing(fabricCanvas) {
         ? { x: lineToDraw.path[1][1], y: lineToDraw.path[1][2] }
         : null;
 
-    attachControlPoints(fabricCanvas, lineToDraw, startPoint, endPoint, midPoint);
+    attachControlPoints(
+      fabricCanvas,
+      lineToDraw,
+      startPoint,
+      endPoint,
+      midPoint
+    );
     fabricCanvas.fire("object:modified");
     fabricCanvas.renderAll();
   });
@@ -66,7 +83,8 @@ function lineDrawing(fabricCanvas) {
     const y2 = endY - startY;
     const r = Math.sqrt(x2 * x2 + y2 * y2);
     const angle =
-      Math.round((((Math.atan2(y2, x2) / Math.PI) * 180 + 7.5) % 360) / 15) * 15;
+      Math.round((((Math.atan2(y2, x2) / Math.PI) * 180 + 7.5) % 360) / 15) *
+      15;
     const cosx = r * Math.cos((angle * Math.PI) / 180);
     const sinx = r * Math.sin((angle * Math.PI) / 180);
     return [
@@ -113,26 +131,7 @@ function lineDrawing(fabricCanvas) {
       .setCoords();
   }
 
-  function syncControlPoints(line) {
-    if (line.p0)
-      line.p0
-        .set({ left: line.path[0][1] - 7.5, top: line.path[0][2] - 7.5 })
-        .setCoords();
-    if (line.p2) {
-      const endPoint = getEndPoint(line.path);
-      line.p2
-        .set({ left: endPoint.x - 7.5, top: endPoint.y - 7.5 })
-        .setCoords();
-    }
-    if (line.p1 && line.path[1][0] === "Q") {
-      line.p1
-        .set({ left: line.path[1][1] - 7.5, top: line.path[1][2] - 7.5 })
-        .setCoords();
-    }
-    [line.p0, line.p2, line.p1].forEach((point) => point?.bringToFront());
-  }
-
-  function createControlPoint(left, top, line1, line2, line3, isMidPoint = false) {
+  function createControlPoint(left, top, line, isMidPoint = false) {
     return new fabric.Circle({
       left,
       top,
@@ -147,23 +146,33 @@ function lineDrawing(fabricCanvas) {
       hasBorders: false,
       hasControls: false,
       visible: false,
-      line1,
-      line2,
-      line3,
+      parentLine: line,
+      offsetX: -7.5,
+      offsetY: -7.5,
     });
   }
 
-  function attachControlPoints(fabricCanvas, line, startPoint, endPoint, midPoint) {
+  function attachControlPoints(
+    fabricCanvas,
+    line,
+    startPoint,
+    endPoint,
+    midPoint
+  ) {
     if (line.p0) fabricCanvas.remove(line.p0);
     if (line.p2) fabricCanvas.remove(line.p2);
     if (line.p1) fabricCanvas.remove(line.p1);
 
-    const p0 = createControlPoint(startPoint.x - 7.5, startPoint.y - 7.5, line, null, null);
+    const p0 = createControlPoint(
+      startPoint.x + -7.5,
+      startPoint.y + -7.5,
+      line
+    );
     p0.name = "p0";
-    const p2 = createControlPoint(endPoint.x - 7.5, endPoint.y - 7.5, null, null, line);
+    const p2 = createControlPoint(endPoint.x + -7.5, endPoint.y + -7.5, line);
     p2.name = "p2";
     const p1 = midPoint
-      ? createControlPoint(midPoint.x - 7.5, midPoint.y - 7.5, null, line, null, true)
+      ? createControlPoint(midPoint.x + -7.5, midPoint.y + -7.5, line, true)
       : null;
     if (p1) p1.name = "p1";
 
@@ -174,46 +183,134 @@ function lineDrawing(fabricCanvas) {
     fabricCanvas.add(p0, p2);
     if (p1) fabricCanvas.add(p1);
 
+    bindControlPoints(line, [p0, p2, p1].filter(Boolean));
     attachControlPointEvents(fabricCanvas, line, p0, p2, p1);
+  }
+
+  function bindControlPoints(line, controlPoints) {
+    const lineTransform = line.calcTransformMatrix();
+    const invertedLineTransform = fabric.util.invertTransform(lineTransform);
+
+    controlPoints.forEach((point) => {
+      const pointTransform = point.calcTransformMatrix();
+      point.relationship = fabric.util.multiplyTransformMatrices(
+        invertedLineTransform,
+        pointTransform
+      );
+    });
+
+    line.off("moving").on("moving", () => updateControlPoints(line));
+    line.off("rotating").on("rotating", () => updateControlPoints(line));
+    line.off("scaling").on("scaling", () => updateControlPointsAndPath(line));
+  }
+
+  function updateControlPoints(line) {
+    const controlPoints = [line.p0, line.p2, line.p1].filter(Boolean);
+    const lineTransform = line.calcTransformMatrix();
+
+    controlPoints.forEach((point) => {
+      if (!point.relationship) return;
+
+      const newTransform = fabric.util.multiplyTransformMatrices(
+        lineTransform,
+        point.relationship
+      );
+      const opt = fabric.util.qrDecompose(newTransform);
+
+      point.set({
+        flipX: false,
+        flipY: false,
+        left: opt.translateX + point.offsetX,
+        top: opt.translateY + point.offsetY,
+        scaleX: 1,
+        scaleY: 1,
+        angle: opt.angle,
+        radius: 6,
+        strokeWidth: 3,
+      });
+      point.setCoords();
+    });
+
+    line._lastLeft = line.left;
+    line._lastTop = line.top;
+
+    fabricCanvas.renderAll();
+  }
+
+  function updateControlPointsAndPath(line) {
+    const controlPoints = [line.p0, line.p2, line.p1].filter(Boolean);
+    const lineTransform = line.calcTransformMatrix();
+
+    controlPoints.forEach((point) => {
+      if (!point.relationship) return;
+
+      const newTransform = fabric.util.multiplyTransformMatrices(
+        lineTransform,
+        point.relationship
+      );
+      const opt = fabric.util.qrDecompose(newTransform);
+
+      point.set({
+        flipX: false,
+        flipY: false,
+        left: opt.translateX,
+        top: opt.translateY,
+        scaleX: 1,
+        scaleY: 1,
+        angle: opt.angle,
+        radius: 6,
+        strokeWidth: 3,
+      });
+      point.setCoords();
+    });
+
+    updatePathFromControlPoints(line);
+    line._lastLeft = line.left;
+    line._lastTop = line.top;
+
+    fabricCanvas.renderAll();
+  }
+
+  function updatePathFromControlPoints(line) {
+    const p0 = line.p0;
+    const p2 = line.p2;
+    const p1 = line.p1;
+
+    const startX = p0.left - p0.offsetX;
+    const startY = p0.top - p0.offsetY;
+    const endX = p2.left - p2.offsetX;
+    const endY = p2.top - p2.offsetY;
+
+    if (p1) {
+      const midX = p1.left - p1.offsetX;
+      const midY = p1.top - p1.offsetY;
+      line.path = [
+        ["M", startX, startY],
+        ["Q", midX, midY, endX, endY],
+      ];
+    } else {
+      line.path = [
+        ["M", startX, startY],
+        ["L", endX, endY],
+      ];
+    }
+
+    setLineDimensions(line);
+    line.set({ scaleX: 1, scaleY: 1 });
   }
 
   function attachControlPointEvents(fabricCanvas, line, p0, p2, p1) {
     const controlPoints = { p0, p2, p1 };
 
-    const moveHandlers = {
-      p0: (point) => {
-        line.path[0][1] = point.left + 7.5;
-        line.path[0][2] = point.top + 7.5;
-      },
-      p2: (point) => {
-        if (line.path[1][0] === "Q") {
-          line.path[1][3] = point.left + 7.5;
-          line.path[1][4] = point.top + 7.5;
-        } else {
-          line.path[1][1] = point.left + 7.5;
-          line.path[1][2] = point.top + 7.5;
-        }
-      },
-      p1: (point) => {
-        if (line.path[1][0] !== "Q") {
-          const midX = (line.path[0][1] + line.path[1][1]) / 2;
-          const midY = (line.path[0][2] + line.path[1][2]) / 2;
-          line.path[1] = ["Q", midX, midY, line.path[1][1], line.path[1][2]];
-        }
-        line.path[1][1] = point.left + 7.5;
-        line.path[1][2] = point.top + 7.5;
-      },
-    };
-
     Object.entries(controlPoints).forEach(([key, point]) => {
       if (!point) return;
 
       point.on("moving", function () {
-        moveHandlers[key](this);
-        setLineDimensions(line);
-        syncControlPoints(line);
+        isControl = true;
+        updatePathFromControlPoints(line);
         fabricCanvas.setActiveObject(line);
         updateLine(line, fabricCanvas);
+        bindControlPoints(line, [p0, p2, p1].filter(Boolean));
       });
 
       point.on("selected", () => {
@@ -232,10 +329,27 @@ function lineDrawing(fabricCanvas) {
     });
 
     line.on("selected", () => {
-      line.set({ hasControls: false, borderColor: "#aaaaaa", padding: 6 });
-      Object.values(controlPoints).forEach((p) =>
-        p?.set({ visible: true }).bringToFront()
-      );
+      console.log("selected line:", line);
+      const allControlPoints = getControlPoint();
+      if (
+        fabricCanvas.getActiveObjects().filter((obj) => !obj.isControlPoint)
+          .length > 1
+      ) {
+        allControlPoints.forEach((point) => {
+          point.set({ visible: false });
+        });
+      } else {
+        if (!isControl) {
+          console.log(line);
+          updateControlPoints(line);
+          fabricCanvas.renderAll();
+        }
+        line.set({ hasControls: false, borderColor: "#aaaaaa", padding: 6 });
+        Object.values(controlPoints).forEach((p) =>
+          p?.set({ visible: true }).bringToFront()
+        );
+        isControl = false;
+      }
       fabricCanvas.renderAll();
     });
 
@@ -254,40 +368,27 @@ function lineDrawing(fabricCanvas) {
         console.warn("e.transform data is incomplete in line moving event", e);
         return;
       }
+      line._lastLeft = e.transform.target.left;
+      line._lastTop = e.transform.target.top;
+      line.left = line._lastLeft;
+      line.top = line._lastTop;
 
-      const delta = {
-        x: e.transform.target.left - (line._lastLeft || e.transform.target.left),
-        y: e.transform.target.top - (line._lastTop || e.transform.target.top),
-      };
+      console.log("moving line", line);
+    });
 
-      if (delta.x !== 0 || delta.y !== 0) {
-        moveLine(line, delta);
-        setLineDimensions(line);
-        syncControlPoints(line);
-        console.log("Line moved with delta:", delta);
+    fabricCanvas.on("before:transform", (e) => {
+      if (!e.target || !e.transform || !e.transform.action) return;
 
-        line._lastLeft = e.transform.target.left;
-        line._lastTop = e.transform.target.top;
-
-        fabricCanvas.renderAll();
-      } else {
-        console.log("No movement detected", delta);
+      const target = e.target;
+      if (
+        (target.type === "path" ||
+          (target.type === "group" &&
+            target._objects.some((obj) => obj.type === "path"))) &&
+        e.transform.action.includes("scale")
+      ) {
+        e.transform.action = null; // 스케일링 차단
       }
     });
-  }
-
-  function moveLine(line, delta) {
-    line.path[0][1] += delta.x;
-    line.path[0][2] += delta.y;
-    if (line.path[1][0] === "Q") {
-      line.path[1][1] += delta.x;
-      line.path[1][2] += delta.y;
-      line.path[1][3] += delta.x;
-      line.path[1][4] += delta.y;
-    } else {
-      line.path[1][1] += delta.x;
-      line.path[1][2] += delta.y;
-    }
   }
 
   fabricCanvas.on("object:removed", (e) => {

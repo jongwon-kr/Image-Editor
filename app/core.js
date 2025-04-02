@@ -17,6 +17,7 @@ import { templates } from "./ui/templates.js";
 import { fullscreen } from "./utils/fullScreen.js";
 import { layerListPanel } from "./ui/layerListPanel.js";
 import { getOverlayImages } from "./utils/utils.js";
+import { colorFilter } from "./ui/colorFilter.js";
 
 /**
  * @param {String} containerSelector jquery selector for image editor container
@@ -63,6 +64,17 @@ class ImageEditor {
   setActiveTool = (id) => {
     this.activeTool = id;
 
+    document
+      .querySelectorAll(`${this.containerSelector} #toolbar button`)
+      .forEach((btn) => btn.classList.remove("active"));
+    document
+      .querySelectorAll(`${this.containerSelector} #toolbar button`)
+      .forEach((btn) => {
+        if (btn.id === id) {
+          btn.classList.add("active");
+        }
+      });
+
     const toolPanels = document.querySelectorAll(
       `${this.containerSelector} .toolpanel`
     );
@@ -92,6 +104,9 @@ class ImageEditor {
       this.activeSelection = null;
     }
 
+    this.canvas.isHandleMode = false;
+    this.canvas.isCuttingMode = false;
+    this.canvas.isColorFilterMode = false;
     this.canvas.isDrawingLineMode = false;
     this.canvas.isDrawingPathMode = false;
     this.canvas.isDrawingMode = false;
@@ -111,6 +126,40 @@ class ImageEditor {
     });
 
     switch (id) {
+      case "select":
+        this.canvas.defaultCursor = "default";
+        break;
+      case "hand":
+        this.canvas.isHandleMode = true;
+        this.canvas.defaultCursor = "grab";
+        this.canvas.selection = false;
+        this.canvas.forEachObject((o) => {
+          o.selectable = false;
+          o.evented = false;
+        });
+        break;
+      case "cut":
+        this.canvas.isCuttingMode = true;
+        this.canvas.defaultCursor = "crosshair";
+        this.canvas.selection = false;
+        this.canvas.forEachObject((o) => {
+          o.selectable = false;
+          o.evented = false;
+        });
+        this.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+        this.fitZoom1();
+        this.updateTip("Tip: 확대 배율을 100%로 설정 후 자르기를 해주세요!");
+        break;
+      case "colorFilter":
+        this.canvas.isColorFilterMode = true;
+        this.canvas.defaultCursor = "crosshair";
+        this.canvas.selection = false;
+        this.canvas.forEachObject((o) => {
+          o.selectable = false;
+          o.evented = false;
+        });
+        this.updateTip("Tip: 색상을 선택하세요!");
+        break;
       case "draw":
         this.canvas.isDrawingMode = true;
         break;
@@ -122,6 +171,9 @@ class ImageEditor {
           o.selectable = false;
           o.evented = false;
         });
+        this.updateTip(
+          "Tip: 드래그로 선을 그리고 제어점을 이용해 선을 수정할 수 있습니다! Shift를 누르면 직선을 그릴 수 있어요!"
+        );
         break;
       case "arrow":
         this.canvas.isDrawingArrowMode = true;
@@ -238,6 +290,10 @@ class ImageEditor {
     initializeShapes(this);
   }
 
+  initializeColorFilter() {
+    colorFilter.call(this);
+  }
+
   initializeLineDrawing() {
     lineDrawing(this.canvas);
   }
@@ -251,7 +307,7 @@ class ImageEditor {
   }
 
   initializeTextBoxDrawing() {
-    textBoxDrawing(this.canvas);
+    textBoxDrawing.call(this);
   }
 
   initializeWeatherData() {
@@ -292,6 +348,10 @@ class ImageEditor {
 
   initializeFullScreen() {
     fullscreen.call(this);
+  }
+
+  initializeLayerListPanel() {
+    layerListPanel.call(this);
   }
 
   initializeLayerListPanel() {
@@ -374,6 +434,7 @@ class ImageEditor {
     this.initializeCanvasSettings();
     this.canvas = this.initializeCanvas();
 
+    this.initializeColorFilter();
     this.initializeSelectionSettings();
     this.initializeCopyPaste();
     this.initializeLayerListPanel();

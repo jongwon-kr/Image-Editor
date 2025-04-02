@@ -2,21 +2,19 @@
  * 글 작성
  */
 
-/**
- * @param {fabric.Canvas} fabricCanvas
- */
-function textBoxDrawing(fabricCanvas) {
+function textBoxDrawing() {
+  const _self = this;
   let isDrawingText = false,
     textboxRect,
     origX,
     origY,
     pointer;
 
-  fabricCanvas.on("mouse:down", (o) => {
-    if (!fabricCanvas.isDrawingTextMode) return;
+  _self.canvas.on("mouse:down", (o) => {
+    if (!_self.canvas.isDrawingTextMode) return;
 
     isDrawingText = true;
-    pointer = fabricCanvas.getPointer(o.e);
+    pointer = _self.canvas.getPointer(o.e);
     origX = pointer.x;
     origY = pointer.y;
     textboxRect = new fabric.Rect({
@@ -29,13 +27,13 @@ function textBoxDrawing(fabricCanvas) {
       fill: "rgba(192, 0, 0, 0.2)",
       transparentCorners: false,
     });
-    fabricCanvas.add(textboxRect);
+    _self.canvas.add(textboxRect);
   });
 
-  fabricCanvas.on("mouse:move", (o) => {
+  _self.canvas.on("mouse:move", (o) => {
     if (!isDrawingText) return;
 
-    pointer = fabricCanvas.getPointer(o.e);
+    pointer = _self.canvas.getPointer(o.e);
 
     if (origX > pointer.x) {
       textboxRect.set({
@@ -56,10 +54,10 @@ function textBoxDrawing(fabricCanvas) {
       height: Math.abs(origY - pointer.y),
     });
 
-    fabricCanvas.renderAll();
+    _self.canvas.renderAll();
   });
 
-  fabricCanvas.on("mouse:up", () => {
+  _self.canvas.on("mouse:up", () => {
     if (!isDrawingText) return;
 
     isDrawingText = false;
@@ -71,12 +69,13 @@ function textBoxDrawing(fabricCanvas) {
       fontSize: 18,
       fontFamily: "'Open Sans', sans-serif",
     });
-    fabricCanvas.remove(textboxRect);
-    fabricCanvas.add(textbox).setActiveObject(textbox);
+    _self.canvas.remove(textboxRect);
+    _self.canvas.add(textbox).setActiveObject(textbox);
     textbox.setControlsVisibility({
       mb: false,
     });
-    fabricCanvas.fire("object:modified");
+    _self.canvas.fire("object:modified");
+    this.setActiveTool("select");
   });
 }
 

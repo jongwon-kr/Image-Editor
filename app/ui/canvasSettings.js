@@ -5,10 +5,6 @@ import {
   generateFabricGradientFromColorStops,
   getFilteredNoFocusObjects,
 } from "../utils/utils.js";
-/**
- * 캔버스 세팅
- */
-("use strict");
 
 function canvasSettings() {
   const _self = this;
@@ -20,7 +16,7 @@ function canvasSettings() {
   );
   mainPanel.insertAdjacentHTML(
     "beforeend",
-    `<div class="toolpanel" id="background-panel"><div class="content"><p class="title">캔버스 설정</p></div></div>`
+    `<div class="toolpanel visible" id="background-panel"><div class="content"><p class="title">캔버스 설정</p></div></div>`
   );
 
   // Canvas Size Section
@@ -127,29 +123,35 @@ function canvasSettings() {
               </div>
             </div>
           </div>
-          <div>
-            <p>배경화면 설정</p>
+          <div style="margin-top: 20px;">
+            <p class="title">배경화면 설정</p>
             <div id="set-canvas-background-image">
               <input type="file" id="fileInput" accept="image/*" style="display:none;">
               <span>미리보기</span>
               <img id="background-img" src="">
               <div id="set-background-tab">
-                <button id="select-background-img-btn">이미지 선택</button>
-                <div style="display: row;">
-                  <span>영역</span>
-                  <select id="select-background-map-area">
-                    <option value="EASIA" selected>동아시아</option>
-                    <option value="KOR">한반도 전체</option>
-                    <option value="SKOR">한반도</option>
-                  </select>
-                  <span>종류</span>
-                  <select id="select-background-map-type">
-                    <option value="IMG" selected>위성사진</option>
-                    <option value="WC">주제도</option>
-                  </select>
-                  <button id="get-background-img-btn" style="margin-top: 3px;">주제도 조회</button>
+                <div class="input-container">
+                  <label>배경 이미지</label>
+                  <div class="custom-option">
+                    <button id="select-background-img-btn" class="btn_w">파일 첨부</button>
+                  </div>
                 </div>
-                <button id="set-background-img-btn">배경화면 적용</button>
+                <div class="input-container">
+                  <label style="width:20%;">주제도</label>
+                  <div class="custom-option">
+                    <select id="select-background-map-area">
+                      <option value="EASIA" selected>동아시아</option>
+                      <option value="KOR">한반도 전체</option>
+                      <option value="SKOR">한반도</option>
+                    </select>
+                    <select id="select-background-map-type">
+                      <option value="IMG" selected>위성사진</option>
+                      <option value="WC">주제도</option>
+                    </select>
+                    <button id="get-background-img-btn" class="btn_w">조회</button>
+                  </div>
+                </div>
+                <button id="set-background-img-btn" class="btn_g">배경화면 적용</button>
               </div>
             </div>
           </div>
@@ -316,6 +318,7 @@ function canvasSettings() {
           updateGradientFill();
         });
       });
+
     const backgroundImage = document.querySelector("#background-img");
     const fileInput = document.querySelector("#fileInput");
     const selectBackgroundImageBtn = document.querySelector(
@@ -352,13 +355,10 @@ function canvasSettings() {
       const selectedArea = mapArea.filter(
         (o) => o.mapRange === e.target.value
       )[0];
-      // 좌상 경, 위도
       selectedMapArea.stLon = selectedArea.stLon;
       selectedMapArea.stLat = selectedArea.stLat;
-      // 우하 경, 위도
       selectedMapArea.edLon = selectedArea.edLon;
       selectedMapArea.edLat = selectedArea.edLat;
-      // zoom 레벨
       selectedMapArea.ZOOMLVL = selectedArea.ZOOMLVL;
     });
 
@@ -402,6 +402,7 @@ function canvasSettings() {
       URLToImage(imageBase64);
     });
   };
+
   function URLToImage(imageBase64) {
     if (!imageBase64) return;
 
@@ -414,8 +415,10 @@ function canvasSettings() {
       height = imgHeight;
 
       // 캔버스 크기 업데이트
-      _self.canvas.originalW = width;
-      _self.canvas.originalH = height;
+      _self.canvas.setWidth(imgWidth);
+      _self.canvas.setHeight(imgHeight);
+      _self.canvas.originalW = imgWidth;
+      _self.canvas.originalH = imgHeight;
 
       // 입력 필드 값도 업데이트
       document.querySelector(
@@ -425,18 +428,49 @@ function canvasSettings() {
         `${_self.containerSelector} .toolpanel#background-panel .content #input-height`
       ).value = imgHeight;
 
-      let objects = getFilteredNoFocusObjects();
-      objects.forEach((obj) => {
-        _self.canvas.remove(obj);
+      // 기존 객체 위치 저장
+      const objects = getFilteredNoFocusObjects();
+
+      // 뷰포트 초기화
+      _self.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]); // 기본 상태로 초기화 (줌 1, 이동 없음)
+
+      // 배경 이미지 설정
+      _self.canvas.setBackgroundImage(img, _self.canvas.renderAll.bind(_self.canvas), {
+        scaleX: 1,
+        scaleY: 1,
+        left: 0,
+        top: 0,
       });
 
-      // 배경 이미지 설정 (스케일링 제거)
-      _self.canvas.setBackgroundImage(img);
-      if (typeof _self.fitZoom === "function") _self.fitZoom1();
-      // 아래 fitZoom을 선택하면 화면의 크기에 맞게 자동 조절됨
+      // 객체 위치 재조정
+      const prevWidth = _self.canvas.getWidth();
+      const prevHeight = _self.canvas.getHeight();
+      const widthRatio = imgWidth / prevWidth;
+      const heightRatio = imgHeight / prevHeight;
+
+      objects.forEach((obj) => {
+        // 이전 뷰포트 변환을 고려한 실제 좌표 계산
+        const matrix = _self.canvas.viewportTransform;
+        const prevLeft = obj.left * matrix[0] + matrix[4];
+        const prevTop = obj.top * matrix[3] + matrix[5];
+
+        // 새로운 크기에 맞춰 좌표 조정
+        obj.set({
+          left: prevLeft * widthRatio,
+          top: prevTop * heightRatio,
+          scaleX: (obj.scaleX || 1) * widthRatio,
+          scaleY: (obj.scaleY || 1) * heightRatio,
+        });
+        obj.setCoords(); // 좌표 업데이트
+      });
+
+      _self.canvas.renderAll();
+
+      // fitZoom 호출 (선택 사항)
       // if (typeof _self.fitZoom === "function") _self.fitZoom();
     });
   }
+
   // Initialize both sections
   initCanvasSizeSection();
   initBackgroundSection();

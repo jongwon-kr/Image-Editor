@@ -23,7 +23,7 @@
 
 - **jQuery v3.5.1**: DOM 조작 및 이벤트 처리
 - **jQuery spectrum-colorpicker2**: 색상 선택기
-- **Fabric.js v3.6.3**: HTML5 캔버스 작업을 위한 그래픽 라이브러리
+- **Fabric.js v5.3.0**: HTML5 캔버스 작업을 위한 그래픽 라이브러리
 - **grapick v0.1.7**:  그라데이션 색 선택기 (그리기 기능에 유용한 라이브러리)
 - **undo-redo-stack**: 작업 취소 및 다시 실행을 위한 스택 관리 라이브러리
 

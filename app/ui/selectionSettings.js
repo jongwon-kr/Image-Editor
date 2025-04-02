@@ -152,81 +152,74 @@ function selectionSettings() {
     selectorPanelContent.insertAdjacentHTML(
       "beforeend",
       `
-        <div class="text-section">
-          <h4>폰트 스타일</h4>
-          <div class="style">
-            <button id="bold"><svg id="Capa_1" x="0px" y="0px" viewBox="-70 -70 450 450" xml:space="preserve"><path d="M218.133,144.853c20.587-14.4,35.2-37.653,35.2-59.52C253.333,37.227,216.107,0,168,0H34.667v298.667h150.187 c44.693,0,79.147-36.267,79.147-80.853C264,185.387,245.547,157.76,218.133,144.853z M98.667,53.333h64c17.707,0,32,14.293,32,32 s-14.293,32-32,32h-64V53.333z M173.333,245.333H98.667v-64h74.667c17.707,0,32,14.293,32,32S191.04,245.333,173.333,245.333z"></path></svg></button>
-            <button id="italic"><svg id="Capa_1" x="0px" y="0px" viewBox="-70 -70 450 450" xml:space="preserve"><polygon points="106.667,0 106.667,64 153.92,64 80.747,234.667 21.333,234.667 21.333,298.667 192,298.667 192,234.667 144.747,234.667 217.92,64 277.333,64 277.333,0  "></polygon></svg></button>
-            <button id="underline"><svg id="Capa_1" x="0px" y="0px" viewBox="-70 -70 450 450" xml:space="preserve"><path d="M192,298.667c70.72,0,128-57.28,128-128V0h-53.333v170.667c0,41.28-33.387,74.667-74.667,74.667 s-74.667-33.387-74.667-74.667V0H64v170.667C64,241.387,121.28,298.667,192,298.667z"></path><rect x="42.667" y="341.333" width="298.667" height="42.667"></rect></svg></button>
-            <button id="linethrough"><svg id="Capa_1" x="0px" y="0px" viewBox="-70 -70 450 450" xml:space="preserve"><polygon points="149.333,160 234.667,160 234.667,96 341.333,96 341.333,32 42.667,32 42.667,96 149.333,96"></polygon><rect x="149.333" y="288" width="85.333" height="64"></rect><rect x="0" y="202.667" width="384" height="42.667"></rect></svg></button>
-            <button id="subscript"><svg id="Capa_1" x="0px" y="0px" viewBox="0 0 512 512" xml:space="preserve"><path d="M248.257,256l103.986-103.758c2.777-2.771,4.337-6.532,4.337-10.455c0-3.923-1.561-7.684-4.337-10.455l-49.057-48.948 c-5.765-5.753-15.098-5.753-20.863,0L178.29,186.188L74.258,82.384c-5.764-5.751-15.098-5.752-20.863,0L4.337,131.333 C1.561,134.103,0,137.865,0,141.788c0,3.923,1.561,7.684,4.337,10.455L108.324,256L4.337,359.758 C1.561,362.528,0,366.29,0,370.212c0,3.923,1.561,7.684,4.337,10.455l49.057,48.948c5.765,5.753,15.098,5.753,20.863,0 l104.033-103.804l104.032,103.804c2.883,2.876,6.657,4.315,10.432,4.315s7.549-1.438,10.432-4.315l49.056-48.948 c2.777-2.771,4.337-6.532,4.337-10.455c0-3.923-1.561-7.684-4.337-10.455L248.257,256z"></path><path d="M497.231,384.331h-44.973l35.508-31.887c14.878-13.36,20.056-34.18,13.192-53.04 c-6.874-18.89-23.565-31.044-43.561-31.717c-0.639-0.021-1.283-0.032-1.928-0.032c-31.171,0-56.531,25.318-56.531,56.439 c0,8.157,6.613,14.769,14.769,14.769c8.156,0,14.769-6.613,14.769-14.769c0-14.833,12.109-26.901,26.992-26.901 c0.316,0,0.631,0.005,0.937,0.016c11.573,0.39,15.78,9.511,16.795,12.297c2.163,5.946,1.942,14.574-5.171,20.962l-64.19,57.643 c-4.552,4.088-6.112,10.56-3.923,16.273c2.189,5.714,7.673,9.486,13.792,9.486h83.523c8.157,0,14.769-6.613,14.769-14.769 S505.387,384.331,497.231,384.331z"></path></svg></button>
-            <button id="superscript"><svg id="Capa_1" x="0px" y="0px" viewBox="0 0 512 512" xml:space="preserve"><path d="M248.257,259.854l103.986-103.758c2.777-2.771,4.337-6.532,4.337-10.455c0-3.923-1.561-7.684-4.337-10.455l-49.057-48.948 c-5.765-5.753-15.098-5.753-20.863,0L178.29,190.042L74.258,86.238c-5.764-5.751-15.099-5.752-20.863,0L4.337,135.187 C1.561,137.958,0,141.719,0,145.642s1.561,7.684,4.337,10.455l103.986,103.758L4.337,363.612C1.561,366.383,0,370.145,0,374.067 c0,3.922,1.561,7.684,4.337,10.455l49.057,48.948c5.765,5.753,15.098,5.753,20.863,0l104.033-103.804l104.032,103.804 c2.883,2.876,6.657,4.315,10.432,4.315s7.549-1.438,10.432-4.315l49.056-48.948c2.777-2.771,4.337-6.532,4.337-10.455 s-1.561-7.684-4.337-10.455L248.257,259.854z"></path><path d="M497.231,190.893h-44.973l35.508-31.887c14.878-13.36,20.056-34.18,13.192-53.04 c-6.874-18.89-23.565-31.044-43.561-31.717c-0.639-0.021-1.283-0.032-1.928-0.032c-31.171,0-56.531,25.318-56.531,56.439 c0,8.157,6.613,14.769,14.769,14.769c8.156,0,14.769-6.613,14.769-14.769c0-14.833,12.109-26.901,26.992-26.901 c0.316,0,0.631,0.005,0.937,0.016c11.573,0.39,15.78,9.511,16.795,12.297c2.163,5.946,1.942,14.574-5.171,20.962l-64.19,57.643 c-4.552,4.088-6.112,10.56-3.923,16.273c2.189,5.714,7.673,9.486,13.792,9.486h83.523c8.157,0,14.769-6.613,14.769-14.769 S505.387,190.893,497.231,190.893z"></path></svg></button>
-          </div>
-          <div class="family">
-            <div class="input-container">
-            <label>Font Family</label>
-            <select id="font-family">
-              <option value=""></option>
-              <option value="'Open Sans', sans-serif">Open Sans</option>
-              <option value="'Oswald', sans-serif">Oswald</option>
-              <option value="'Playfair Display', serif">Playfair Display</option>
-              <option value="'Cormorant Garamond', serif">Cormorant Garamond</option>
-              <option value="Impact, Charcoal, sans-serif">Impact</option>
-              <option value="'Lucida Console', Monaco, monospace">Lucida Console</option>
-              <option value="'Comic Sans MS', 'Comic Sans', cursive, sans-serif">Comic Sans</option>
-              <option value="'Dancing Script', cursive">Dancing Script</option>
-              <option value="'Indie Flower', cursive">Indie Flower</option>
-              <option value="'Amatic SC', cursive">Amatic SC</option>
-              <option value="'Permanent Marker', cursive">Permanent Marker</option>
-            </select>
-            </div>
-          </div>
-          <div class="sizes">
-            <div class="input-container">
-              <label>글꼴 크기</label>
-              <div class="custom-number-input">
-                <button class="decrease">-</button>
-                <input type="number" min="1" value="20" id="fontSize">
-                <button class="increase">+</button>
-              </div>
-            </div>
-            <div class="input-container">
-              <label>줄 간격</label>
-              <div class="custom-number-input">
-                <button class="decrease">-</button>
-                <input type="number" min="0" max="3" value="1" step="0.1" id="lineHeight">
-                <button class="increase">+</button>
-              </div>
-            </div>
-            <div class="input-container">
-              <label>글자 간격</label>
-              <div class="custom-number-input">
-                <button class="decrease">-</button>
-                <input type="number" min="0" max="2000" step="100" value="0" id="charSpacing">
-                <button class="increase">+</button>
-              </div>
-            </div>
-          </div>
-          <div class="align">
-            <div class="input-container">
-              <label>텍스트 정렬</label>
-              <select id="text-align">
-                <option value="left">왼쪽</option>
-                <option value="center">가운데</option>
-                <option value="right">오른쪽</option>
-                <option value="justify">양쪽</option>
-              </select>
-            </div>
-          </div>
-          <div class="color">
-            <div class="input-container">
-              <label>텍스트 색상</label>
-              <input id="color-picker" value="black">
-            </div>
-          </div>
-          <hr>
+      <div class="text-section">
+        <h4>폰트 스타일</h4>
+        <div class="style">
+          <button id="bold"><svg id="Capa_1" x="0px" y="0px" viewBox="-70 -70 450 450" xml:space="preserve"><path d="M218.133,144.853c20.587-14.4,35.2-37.653,35.2-59.52C253.333,37.227,216.107,0,168,0H34.667v298.667h150.187 c44.693,0,79.147-36.267,79.147-80.853C264,185.387,245.547,157.76,218.133,144.853z M98.667,53.333h64c17.707,0,32,14.293,32,32 s-14.293,32-32,32h-64V53.333z M173.333,245.333H98.667v-64h74.667c17.707,0,32,14.293,32,32S191.04,245.333,173.333,245.333z"></path></svg></button>
+          <button id="italic"><svg id="Capa_1" x="0px" y="0px" viewBox="-70 -70 450 450" xml:space="preserve"><polygon points="106.667,0 106.667,64 153.92,64 80.747,234.667 21.333,234.667 21.333,298.667 192,298.667 192,234.667 144.747,234.667 217.92,64 277.333,64 277.333,0  "></polygon></svg></button>
+          <button id="underline"><svg id="Capa_1" x="0px" y="0px" viewBox="-70 -70 450 450" xml:space="preserve"><path d="M192,298.667c70.72,0,128-57.28,128-128V0h-53.333v170.667c0,41.28-33.387,74.667-74.667,74.667 s-74.667-33.387-74.667-74.667V0H64v170.667C64,241.387,121.28,298.667,192,298.667z"></path><rect x="42.667" y="341.333" width="298.667" height="42.667"></rect></svg></button>
+          <button id="linethrough"><svg id="Capa_1" x="0px" y="0px" viewBox="-70 -70 450 450" xml:space="preserve"><polygon points="149.333,160 234.667,160 234.667,96 341.333,96 341.333,32 42.667,32 42.667,96 149.333,96"></polygon><rect x="149.333" y="288" width="85.333" height="64"></rect><rect x="0" y="202.667" width="384" height="42.667"></rect></svg></button>
+          <button id="subscript"><svg id="Capa_1" x="0px" y="0px" viewBox="0 0 512 512" xml:space="preserve"><path d="M248.257,256l103.986-103.758c2.777-2.771,4.337-6.532,4.337-10.455c0-3.923-1.561-7.684-4.337-10.455l-49.057-48.948 c-5.765-5.753-15.098-5.753-20.863,0L178.29,186.188L74.258,82.384c-5.764-5.751-15.098-5.752-20.863,0L4.337,131.333 C1.561,134.103,0,137.865,0,141.788c0,3.923,1.561,7.684,4.337,10.455L108.324,256L4.337,359.758 C1.561,362.528,0,366.29,0,370.212c0,3.923,1.561,7.684,4.337,10.455l49.057,48.948c5.765,5.753,15.098,5.753,20.863,0 l104.033-103.804l104.032,103.804c2.883,2.876,6.657,4.315,10.432,4.315s7.549-1.438,10.432-4.315l49.056-48.948 c2.777-2.771,4.337-6.532,4.337-10.455c0-3.923-1.561-7.684-4.337-10.455L248.257,256z"></path><path d="M497.231,384.331h-44.973l35.508-31.887c14.878-13.36,20.056-34.18,13.192-53.04 c-6.874-18.89-23.565-31.044-43.561-31.717c-0.639-0.021-1.283-0.032-1.928-0.032c-31.171,0-56.531,25.318-56.531,56.439 c0,8.157,6.613,14.769,14.769,14.769c8.156,0,14.769-6.613,14.769-14.769c0-14.833,12.109-26.901,26.992-26.901 c0.316,0,0.631,0.005,0.937,0.016c11.573,0.39,15.78,9.511,16.795,12.297c2.163,5.946,1.942,14.574-5.171,20.962l-64.19,57.643 c-4.552,4.088-6.112,10.56-3.923,16.273c2.189,5.714,7.673,9.486,13.792,9.486h83.523c8.157,0,14.769-6.613,14.769-14.769 S505.387,384.331,497.231,384.331z"></path></svg></button>
+          <button id="superscript"><svg id="Capa_1" x="0px" y="0px" viewBox="0 0 512 512" xml:space="preserve"><path d="M248.257,259.854l103.986-103.758c2.777-2.771,4.337-6.532,4.337-10.455c0-3.923-1.561-7.684-4.337-10.455l-49.057-48.948 c-5.765-5.753-15.098-5.753-20.863,0L178.29,190.042L74.258,86.238c-5.764-5.751-15.099-5.752-20.863,0L4.337,135.187 C1.561,137.958,0,141.719,0,145.642s1.561,7.684,4.337,10.455l103.986,103.758L4.337,363.612C1.561,366.383,0,370.145,0,374.067 c0,3.922,1.561,7.684,4.337,10.455l49.057,48.948c5.765,5.753,15.098,5.753,20.863,0l104.033-103.804l104.032,103.804 c2.883,2.876,6.657,4.315,10.432,4.315s7.549-1.438,10.432-4.315l49.056-48.948c2.777-2.771,4.337-6.532,4.337-10.455 s-1.561-7.684-4.337-10.455L248.257,259.854z"></path><path d="M497.231,190.893h-44.973l35.508-31.887c14.878-13.36,20.056-34.18,13.192-53.04 c-6.874-18.89-23.565-31.044-43.561-31.717c-0.639-0.021-1.283-0.032-1.928-0.032c-31.171,0-56.531,25.318-56.531,56.439 c0,8.157,6.613,14.769,14.769,14.769c8.156,0,14.769-6.613,14.769-14.769c0-14.833,12.109-26.901,26.992-26.901 c0.316,0,0.631,0.005,0.937,0.016c11.573,0.39,15.78,9.511,16.795,12.297c2.163,5.946,1.942,14.574-5.171,20.962l-64.19,57.643 c-4.552,4.088-6.112,10.56-3.923,16.273c2.189,5.714,7.673,9.486,13.792,9.486h83.523c8.157,0,14.769-6.613,14.769-14.769 S505.387,190.893,497.231,190.893z"></path></svg></button>
         </div>
-      `
+        <div class="family">
+          <div class="input-container">
+            <label>글꼴</label>
+            <select id="font-family">
+              <option value="바탕체">바탕체</option>
+              <option value="궁서체">궁서체</option>
+              <option value="돋움체">돋움체</option>
+              <option value="맑은 고딕">맑은 고딕</option>
+              <option value="HY견고딕">HY견고딕</option>
+            </select>
+          </div>
+        </div>
+        <div class="sizes">
+          <div class="input-container">
+            <label>글꼴 크기</label>
+            <div class="custom-number-input">
+              <button class="decrease">-</button>
+              <input type="number" min="1" value="20" id="fontSize">
+              <button class="increase">+</button>
+            </div>
+          </div>
+          <div class="input-container">
+            <label>줄 간격</label>
+            <div class="custom-number-input">
+              <button class="decrease">-</button>
+              <input type="number" min="0" max="3" value="1" step="0.1" id="lineHeight">
+              <button class="increase">+</button>
+            </div>
+          </div>
+          <div class="input-container">
+            <label>글자 간격</label>
+            <div class="custom-number-input">
+              <button class="decrease">-</button>
+              <input type="number" min="0" max="2000" step="100" value="0" id="charSpacing">
+              <button class="increase">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="align">
+          <div class="input-container">
+            <label>텍스트 정렬</label>
+            <select id="text-align">
+              <option value="left">왼쪽 정렬</option>
+              <option value="center">가운데 정렬</option>
+              <option value="right">오른쪽 정렬</option>
+              <option value="justify">일정 간격</option>
+            </select>
+          </div>
+        </div>
+        <div class="color">
+          <div class="input-container">
+            <label>텍스트 색상</label>
+            <input id="color-picker" value="black">
+          </div>
+        </div>
+        <hr>
+      </div>
+    `
     );
 
     const styleButtons = document.querySelectorAll(
@@ -275,7 +268,6 @@ function selectionSettings() {
               setActiveFontStyle(_self.activeSelection, "deltaY", undefined);
             } else {
               _self.activeSelection.setSubscript();
-              _self.canvas.renderAll();
             }
             break;
           case "superscript":
@@ -284,7 +276,6 @@ function selectionSettings() {
               setActiveFontStyle(_self.activeSelection, "deltaY", undefined);
             } else {
               _self.activeSelection.setSuperscript();
-              _self.canvas.renderAll();
             }
             break;
           default:
@@ -298,7 +289,7 @@ function selectionSettings() {
     const fontFamilySelect = document.querySelector(
       `${this.containerSelector} .toolpanel#select-panel .family #font-family`
     );
-    fontFamilySelect.addEventListener("change", function () {
+    fontFamilySelect.addEventListener("input", function () {
       let family = this.value;
       setActiveFontStyle(_self.activeSelection, "fontFamily", family);
       _self.canvas.renderAll();
@@ -309,10 +300,32 @@ function selectionSettings() {
       `${this.containerSelector} .toolpanel#select-panel .sizes input`
     );
     fontSizeInput.forEach((input) => {
-      input.addEventListener("change", function () {
+      input.addEventListener("input", function () {
         let value = parseFloat(this.value);
         let type = this.id;
         setActiveFontStyle(_self.activeSelection, type, value);
+        _self.canvas.renderAll();
+        _self.canvas.fire("object:modified");
+      });
+
+      // 증가/감소 버튼도 실시간 적용되도록 수정
+      const decreaseButton = input.previousElementSibling;
+      const increaseButton = input.nextElementSibling;
+
+      decreaseButton.addEventListener("click", function () {
+        let value = parseFloat(input.value) - (parseFloat(input.step) || 1);
+        if (value < parseFloat(input.min)) value = parseFloat(input.min);
+        input.value = value;
+        setActiveFontStyle(_self.activeSelection, input.id, value);
+        _self.canvas.renderAll();
+        _self.canvas.fire("object:modified");
+      });
+
+      increaseButton.addEventListener("click", function () {
+        let value = parseFloat(input.value) + (parseFloat(input.step) || 1);
+        if (value > parseFloat(input.max)) value = parseFloat(input.max);
+        input.value = value;
+        setActiveFontStyle(_self.activeSelection, input.id, value);
         _self.canvas.renderAll();
         _self.canvas.fire("object:modified");
       });
@@ -321,28 +334,29 @@ function selectionSettings() {
     const textAlignSelect = document.querySelector(
       `${this.containerSelector} .toolpanel#select-panel .align #text-align`
     );
-    textAlignSelect.addEventListener("change", function () {
+    textAlignSelect.addEventListener("input", function () {
       let mode = this.value;
       setActiveFontStyle(_self.activeSelection, "textAlign", mode);
       _self.canvas.renderAll();
       _self.canvas.fire("object:modified");
     });
 
-    // color picker 라이브러리가 Jquery로 구현되어 있어 예외적으로 Jquery로 작성
+    // color picker는 실시간 반영을 위해 'move' 이벤트 사용
     const colorPicker = $(
       `${this.containerSelector} .toolpanel#select-panel .color #color-picker`
     );
-    colorPicker
-      .spectrum({
-        type: "color",
-        showInput: "true",
-        allowEmpty: "false",
-      })
-      .change(function () {
-        let color = $(this).val();
-        setActiveFontStyle(_self.activeSelection, "fill", color);
-        _self.canvas.renderAll(), _self.canvas.fire("object:modified");
-      });
+    colorPicker.spectrum({
+      showButtons: false,
+      type: "color",
+      showInput: true,
+      allowEmpty: false,
+      move: function (color) {
+        let hex = color.toRgbString();
+        setActiveFontStyle(_self.activeSelection, "fill", hex);
+        _self.canvas.renderAll();
+        _self.canvas.fire("object:modified");
+      },
+    });
   })();
   // end font section
 

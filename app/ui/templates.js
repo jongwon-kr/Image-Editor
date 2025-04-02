@@ -12,6 +12,7 @@ function templates() {
   const _self = this;
 
   let TemplatesList = defaultTemplates;
+
   if (Array.isArray(this.templates) && this.templates.length)
     TemplatesList.push(...this.templates);
 
@@ -42,7 +43,8 @@ function templates() {
 
   const openShareGalleryButton = document.createElement("button");
   openShareGalleryButton.classList.add("open-share-gallery-button");
-  openShareGalleryButton.textContent = "공유 저장소";
+  openShareGalleryButton.classList.add("btn_g");
+  openShareGalleryButton.textContent = "이미지 저장소 관리";
   openShareGalleryButton.addEventListener("click", () => {
     openShareGallery();
   });
@@ -52,6 +54,7 @@ function templates() {
   // 템플릿 추가 버튼
   const button = document.createElement("button");
   button.classList.add("template-add-button");
+  button.classList.add("btn_b");
   button.innerHTML = "템플릿 추가";
   button.onclick = function () {
     const templateName = prompt("저장할 템플릿 이름을 입력해주세요:");
@@ -61,7 +64,6 @@ function templates() {
     }
 
     const canvasJsonData = _self.canvas.toJSON(["name"]);
-    // 필터링 시 유효한 객체만 포함
     const filteredData = {
       objects: canvasJsonData.objects.filter((obj) => {
         const isValid = obj && typeof obj.type === "string";
@@ -81,7 +83,6 @@ function templates() {
     _self.canvas.backgroundColor = "transparent";
     _self.canvas.renderAll();
 
-    // 저장될 템플릿 사이즈 임의로 설정
     const templateDimension = {
       width: 1280,
       height: 720,
@@ -105,7 +106,7 @@ function templates() {
       name: templateName,
       preview: preview,
       data: canvasData,
-      timestamp: new Date().getTime(),
+      timestamp: new Date().getTime(), // 현재 시간을 기준으로 최신 timestamp 부여
     };
 
     TemplatesList.push(newTemplate);
@@ -116,8 +117,10 @@ function templates() {
     });
     window.dispatchEvent(event);
 
-    templatesList.innerHTML = "";
-    updateTemplates(TemplatesList, templatesList);
+    // 리스트를 timestamp 기준으로 내림차순 정렬 (최신이 위로)
+    TemplatesList.sort((a, b) => b.timestamp - a.timestamp);
+    templatesList.innerHTML = ""; // 기존 리스트 초기화
+    updateTemplates(TemplatesList, templatesList); // 정렬된 리스트로 UI 업데이트
   };
 
   templateManagerTop.appendChild(button);
@@ -142,25 +145,26 @@ function templates() {
     }
   });
 
+  // 초기 로드 시에도 timestamp로 정렬
+  TemplatesList.sort((a, b) => b.timestamp - a.timestamp);
   updateTemplates(TemplatesList, templatesList);
+
   function openShareGallery() {
-    // 모달창 생성
+    // 기존 openShareGallery 함수 내용 유지
     const shareGalleryModal = document.createElement("div");
     shareGalleryModal.classList.add("custom-modal-container");
 
-    // 모달 뒷 배경 (오버레이)
     const modalOverlay = document.createElement("div");
     modalOverlay.classList.add("modal-overlay");
     modalOverlay.addEventListener("click", closeShareGallery);
 
-    // 모달 콘텐츠
     const modalContent = document.createElement("div");
     modalContent.classList.add("modal-content");
 
     const modalHeader = document.createElement("div");
     modalHeader.classList.add("modal-header");
 
-    const modalLabel = document.createElement("h4");
+    const modalLabel = document.createElement("h3");
     modalLabel.classList.add("modal-label");
     modalLabel.textContent = "템플릿 저장소";
     modalHeader.appendChild(modalLabel);
@@ -178,6 +182,7 @@ function templates() {
     categories.forEach((category) => {
       const selectCategoryButton = document.createElement("button");
       selectCategoryButton.classList.add("select-category-button");
+      selectCategoryButton.classList.add("btn_w");
       selectCategoryButton.textContent = category.label;
       selectCategoryButton.id = category.name;
 
@@ -190,28 +195,26 @@ function templates() {
 
     filterBar.appendChild(selectCategoryTab);
 
-    // 검색바
     const searchBar = document.createElement("input");
     searchBar.type = "text";
     searchBar.placeholder = "검색어를 입력해주세요.";
     searchBar.classList.add("search-bar");
 
     filterBar.appendChild(searchBar);
-    // 이미지 갤러리
+
     const shareGallery = document.createElement("div");
     shareGallery.classList.add("share-gallery");
 
     const modalFooter = document.createElement("div");
     modalFooter.classList.add("modal-footer");
 
-    // 닫기 버튼
     const closeButton = document.createElement("button");
     closeButton.textContent = "닫기";
     closeButton.classList.add("close-modal-button");
+    closeButton.classList.add("btn_g");
     closeButton.addEventListener("click", closeShareGallery);
     modalFooter.appendChild(closeButton);
 
-    // 모달에 요소 추가
     modalContent.appendChild(modalHeader);
     modalContent.appendChild(filterBar);
     modalContent.appendChild(shareGallery);
@@ -220,7 +223,6 @@ function templates() {
     shareGalleryModal.appendChild(modalContent);
     document.body.appendChild(shareGalleryModal);
 
-    // 공유 갤러리에 이미지 추가 (시간순 정렬)
     const sortedTemplates = [...TemplatesList].sort(
       (a, b) => b.timestamp - a.timestamp
     );
@@ -243,25 +245,27 @@ function templates() {
       const saveButton = document.createElement("button");
       saveButton.textContent = "저장";
       saveButton.classList.add("save-button");
+      saveButton.classList.add("btn_w");
       saveButton.addEventListener("click", () => saveTemplate(template));
 
       const deleteButton = document.createElement("button");
       deleteButton.textContent = "삭제";
       deleteButton.classList.add("delete-button");
+      deleteButton.classList.add("btn_w");
       deleteButton.addEventListener("click", () => deleteTemplate(template));
 
-      // 다운로드 버튼
       const downloadButton = document.createElement("button");
       downloadButton.textContent = "다운로드";
       downloadButton.classList.add("download-button");
+      downloadButton.classList.add("btn_w");
       downloadButton.addEventListener("click", () =>
         downloadTemplate(template)
       );
 
-      // 공유 버튼
       const shareButton = document.createElement("button");
       shareButton.textContent = "공유";
       shareButton.classList.add("share-button");
+      shareButton.classList.add("btn_w");
       shareButton.addEventListener("click", () => shareTemplate(template));
 
       imageWrapper.appendChild(templateElement);
@@ -277,12 +281,8 @@ function templates() {
 
   function getFilteredTemplatesByCategory(category) {
     if (category.name === "my-template") {
-      // 내 템플릿
-      // 내 템플릿들 필터링 로직 나중에 구현(템플릿 객체에 사용자 정보 및 type(개인, 공유) 추가 필요)
       console.log("내 템플릿 불러오기");
     } else if (category.name === "share-template") {
-      // 공유 템플릿
-      // 공유 템플릿들 필터링 로직 나중에 구현
       console.log("공유 템플릿 불러오기");
     }
   }
@@ -354,27 +354,29 @@ function applyTemplate(index, templates, canvas) {
 // 템플릿 리스트 업데이트
 function updateTemplates(templates, templatesList) {
   templates.forEach((template, index) => {
-    // 템플릿 형식
     const templateForm = document.createElement("div");
 
-    // Header(제목, 삭제버튼)
     const templateHeader = document.createElement("div");
     templateHeader.classList.add("template-header");
 
-    // 템플릿 제목
     const templateTitle = document.createElement("p");
     templateTitle.classList.add("template-title");
     templateTitle.textContent = template.name;
     templateHeader.appendChild(templateTitle);
 
-    // 삭제 버튼
     const removeButton = document.createElement("button");
     removeButton.classList.add("template-remove-button");
+    removeButton.classList.add("btn_r");
     removeButton.innerHTML = "삭제";
+    removeButton.addEventListener("click", () => {
+      templates.splice(index, 1);
+      templatesList.innerHTML = "";
+      templates.sort((a, b) => b.timestamp - a.timestamp);
+      updateTemplates(templates, templatesList);
+    });
     templateHeader.appendChild(removeButton);
     templateForm.appendChild(templateHeader);
 
-    // 템플릿 추가 버튼 => 이미지(preview) 영역
     const button = document.createElement("div");
     button.classList.add("template-button");
     button.dataset.index = index;

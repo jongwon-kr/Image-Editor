@@ -474,4 +474,5 @@ export {
   getFilteredFocusObjects,
   getFilteredNoFocusObjects,
   getOverlayImages,
+  getControlPoint,
 };
