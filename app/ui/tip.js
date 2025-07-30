@@ -1,14 +1,17 @@
+// @ts-nocheck
 /**
  * 도움말 패널
  */
+const defaultTips = [
+  "Tip: 방향키를 사용하여 선택한 객체를 1픽셀만큼 이동합니다",
+  "Tip: Shift를 누르고 클릭하여 여러 개체를 선택하고 수정합니다",
+  "Tip: Shift를 누르고 각도 조절을 하면 15°씩 조절할 수 있습니다.",
+  "Tip: Alt를 누르고 크기를 조정하면 객체의 중심을 기준으로 조절합니다",
+  "Tip: Shift를 누르고 크기를 조정하면 객체의 크기를 자유 비율로 조절합니다.",
+  "Tip: Ctrl +/-, Ctrl + 마우스 휠로 확대 및 축소가 가능합니다.",
+  "Tip: Ctrl + A를 눌러 모든 객체를 선택할 수 있습니다.",
+];
 function tipPanel() {
-  const defaultTips = [
-    "Tip: 방향키를 사용하여 선택한 객체를 1픽셀만큼 이동합니다",
-    "Tip: Shift를 누르고 클릭하여 여러 개체를 선택하고 수정합니다",
-    "Tip: Shift를 누르고 각도 조절을 하면 15°씩 조절할 수 있습니다.",
-    "Tip: Ctrl +/-, Ctrl + 마우스 휠로 확대 및 축소가 가능합니다.",
-  ];
-
   const _self = this;
 
   document
@@ -45,4 +48,4 @@ function tipPanel() {
   };
 }
 
-export { tipPanel };
+export { tipPanel, defaultTips };

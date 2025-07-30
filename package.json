@@ -2,25 +2,30 @@
     "name": "graphic-cast",
     "type": "module",
     "scripts": {
-      "start": "webpack serve --open",
-      "build": "webpack && npm run copyjs && npm run copycss",
-      "copyjs": "copy .\\dist\\*.js* C:\\KAF\\workspace_afs\\afs2-ias\\src\\main\\resources\\static\\js\\wgc\\",
-      "copycss": "copy .\\dist\\*.css* C:\\KAF\\workspace_afs\\afs2-ias\\src\\main\\resources\\static\\css\\wgc\\"
+        "start": "webpack serve --open",
+        "build": "webpack && npm run copyjs && npm run copycss",
+        "build:simple": "webpack --config webpack.config.mjs --env mode=simple",
+        "build:default": "webpack --config webpack.config.mjs --env mode=default",
+        "build:pro": "webpack --config webpack.config.mjs --env mode=pro",
+        "copyjs": "copy .\\dist\\*.js* C:\\KAF\\workspace_afs\\afs2-ias\\src\\main\\resources\\static\\js\\wgc\\",
+        "copycss": "copy .\\dist\\*.css* C:\\KAF\\workspace_afs\\afs2-ias\\src\\main\\resources\\static\\css\\wgc\\"
     },
     "devDependencies": {
-      "@babel/core": "^7.19.3",
-      "@babel/preset-env": "^7.19.3",
-      "babel-loader": "^8.2.2",
-      "copy-webpack-plugin": "^11.0.0",
-      "css-loader": "^6.7.1",
-      "html-webpack-plugin": "^5.5.0",
-      "mini-css-extract-plugin": "^2.7.2",
-      "style-loader": "^3.3.1",
-      "webpack": "^5.75.0",
-      "webpack-cli": "^6.0.1",
-      "webpack-dev-server": "^4.7.4",
-      "fabric": "5.4.2"
+        "@babel/core": "^7.19.3",
+        "@babel/preset-env": "^7.19.3",
+        "@babel/preset-typescript": "^7.27.1",
+        "@types/node": "^24.1.0",
+        "babel-loader": "^8.2.2",
+        "copy-webpack-plugin": "^11.0.0",
+        "css-loader": "^6.7.1",
+        "fabric": "5.4.2",
+        "html-webpack-plugin": "^5.5.0",
+        "mini-css-extract-plugin": "^2.7.2",
+        "style-loader": "^3.3.1",
+        "typescript": "^5.8.3",
+        "webpack": "^5.75.0",
+        "webpack-cli": "^6.0.1",
+        "webpack-dev-server": "^4.7.4"
     },
     "author": "Taiho"
-  }
-  
+}

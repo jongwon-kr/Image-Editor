@@ -1,4 +1,5 @@
-import { imgEditor } from "../index.js";
+// @ts-nocheck
+import { imgEditor } from "../index.ts";
 import { removeTooltip } from "../ui/toolbar.js";
 
 /**
@@ -31,7 +32,6 @@ function fullscreen() {
       removeTooltip();
     });
 
-    // fullscreenchange 이벤트 리스너 추가
     document.addEventListener("fullscreenchange", () => {
       if (!document.fullscreenElement) {
         fullscreenButton.innerHTML = expand;

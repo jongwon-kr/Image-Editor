@@ -1,22 +1,25 @@
+// @ts-nocheck
+"use strict";
+
+import {
+  retWgcImg,
+  saveWgcImg,
+  deleteWgcImg,
+  getFileData,
+} from "../api/wgcApiService.js";
 import { processFiles } from "../utils/processFile.js";
-
-/**
- * 이미지 패널
- */
-
-("use strict");
-
-// 로컬스토리지에서 기존 이미지 불러오기
-const storedImages = JSON.parse(localStorage.getItem("ImageFileList")) || [];
-const defaultImages = storedImages;
 
 function images() {
   const _self = this;
-
-  const ImageFileList = defaultImages;
-  if (Array.isArray(this.images) && this.images.length) {
-    ImageFileList.push(...this.images);
-  }
+  let ImageFileList = [];
+  let lastRenderedImages = [];
+  let isMyData = true;
+  let currentPage = 1;
+  const itemsPerPage = 8;
+  const currentUsr = currentUserId;
+  let myImageButton;
+  let shareImageButton;
+  const imageDataCache = new Map();
 
   const toolPanel = document.createElement("div");
   toolPanel.classList.add("toolpanel");
@@ -39,11 +42,10 @@ function images() {
   imageUpload.classList.add("drag-drop-input");
   const uploadInput = document.createElement("div");
   uploadInput.textContent =
-    "드래그앤 드롭하거나 영역을 클릭하여 이미지를 추가할 수 있습니다.";
+    "드래그앤 드롭하거나 클릭하여 이미지를 업로드하세요.";
   imageUpload.appendChild(uploadInput);
   content.appendChild(imageUpload);
 
-  // 드래그 영역 클릭 시 파일 업로드 버튼 클릭
   const dragDropInput = toolPanel.querySelector(".drag-drop-input");
   dragDropInput.addEventListener("click", function () {
     document
@@ -51,21 +53,18 @@ function images() {
       .click();
   });
 
-  // 드래그 오버 시 클래스 추가
   dragDropInput.addEventListener("dragover", function (event) {
     event.preventDefault();
     event.stopPropagation();
     this.classList.add("dragging");
   });
 
-  // 드래그 리브 시 클래스 제거
   dragDropInput.addEventListener("dragleave", function (event) {
     event.preventDefault();
     event.stopPropagation();
     this.classList.remove("dragging");
   });
 
-  // drop 이벤트
   dragDropInput.addEventListener("drop", async function (event) {
     event.preventDefault();
     event.stopPropagation();
@@ -73,22 +72,17 @@ function images() {
 
     if (event.dataTransfer && event.dataTransfer.files.length) {
       let files = event.dataTransfer.files;
-
       try {
         const result = await processFiles(files);
-
         if (result.length > 0) {
-          result.forEach((obj) => {
-            ImageFileList.push(obj); // obj 전체를 추가
+          result.forEach((img) => {
+            saveDropImage({ ...img, usrId: currentUsr, shareYn: "N" });
           });
-          console.log(ImageFileList);
-          // 로컬스토리지에 저장
-          localStorage.setItem("ImageFileList", JSON.stringify(ImageFileList));
         }
-
-        updateImageGallery(); // 갤러리 업데이트
+        await updateImageGallery();
       } catch (error) {
         console.error("파일 처리 중 오류 발생:", error);
+        alert("파일 처리에 실패했습니다.");
       }
     }
   });
@@ -98,80 +92,161 @@ function images() {
   content.appendChild(openShareGalleryTab);
 
   const openShareGalleryButton = document.createElement("button");
-  openShareGalleryButton.classList.add("open-share-gallery-button");
-  openShareGalleryButton.classList.add("btn_g");
+  openShareGalleryButton.classList.add("open-share-gallery-button", "btn_g");
   openShareGalleryButton.textContent = "이미지 저장소 관리";
-  openShareGalleryButton.addEventListener("click", function () {
-    openShareGallery();
-  });
-
+  openShareGalleryButton.addEventListener("click", openShareGallery);
   openShareGalleryTab.appendChild(openShareGalleryButton);
 
   const imageGallery = document.createElement("div");
   imageGallery.classList.add("image-gallery");
   content.appendChild(imageGallery);
 
-  function updateImageGallery() {
-    imageGallery.innerHTML = "";
+  async function svgToPng(svgData) {
+    try {
+      const img = new Image();
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
 
-    const sortedImages = [...ImageFileList].sort(
-      (a, b) => b.timestamp - a.timestamp
-    );
+      const svgBlob = new Blob([svgData], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(svgBlob);
 
-    sortedImages.forEach((img, index) => {
-      const button = document.createElement("div");
-      button.classList.add("image-wrapper");
-      button.dataset.index = index;
-
-      const imgElement = document.createElement("img");
-      imgElement.classList.add("gallery-image");
-      imgElement.src = img.preview;
-
-      button.appendChild(imgElement);
-      button.addEventListener("click", async function () {
-        if (!img.file || !img.file.data) {
-          console.error("파일 데이터가 없습니다:", img);
-          return;
-        }
-
-        let blob;
-        if (
-          img.file.type === "image/svg+xml" &&
-          !img.file.data.startsWith("data:")
-        ) {
-          // SVG 텍스트를 Blob으로 변환
-          blob = new Blob([img.file.data], { type: "image/svg+xml" });
-        } else {
-          // Data URL인 경우 fetch로 Blob 변환
-          blob = await (await fetch(img.file.data)).blob();
-        }
-
-        const file = new File([blob], img.file.name, {
-          type: img.file.type,
-          lastModified: img.file.lastModified,
-        });
-        await processFiles([file]);
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = url;
       });
 
-      imageGallery.appendChild(button);
-    });
+      canvas.width = img.width || 200;
+      canvas.height = img.height || 200;
+      ctx.drawImage(img, 0, 0);
+
+      const pngData = canvas.toDataURL("image/png");
+      URL.revokeObjectURL(url);
+      return pngData;
+    } catch (error) {
+      console.error("SVG를 PNG로 변환 중 오류:", error);
+      return svgData;
+    }
   }
 
-  updateImageGallery();
+  async function fetchImageData(img) {
+    if (imageDataCache.has(img.imgId)) {
+      return imageDataCache.get(img.imgId);
+    }
+    try {
+      const response = await getFileData({ filePath: img.filePath });
+      if (response && response.wgcFileDataVo && response.wgcFileDataVo.data) {
+        const imgData = response.wgcFileDataVo.data;
+        imageDataCache.set(img.imgId, imgData);
+        return imgData;
+      } else {
+        return null;
+      }
+    } catch (error) {
+      return null;
+    }
+  }
 
-  function openShareGallery() {
-    // 모달창 생성
+  async function updateImageGallery() {
+    try {
+      const resImages = await retWgcImg();
+      if (
+        !resImages ||
+        !resImages.body ||
+        !Array.isArray(resImages.body.imageList)
+      ) {
+        console.warn("retWgcImg 응답이 유효하지 않습니다:", resImages);
+        ImageFileList = [];
+      } else {
+        const uniqueImages = new Map();
+        resImages.body.imageList.forEach((img) => {
+          if (img.imgId && img.imgNm && img.filePath) {
+            uniqueImages.set(img.imgId, {
+              imgId: img.imgId,
+              imgNm: img.imgNm,
+              filePath: img.filePath,
+              fileNm: img.fileNm,
+              registDate: img.registDate,
+              shareYn: img.shareYn,
+              usrId: img.usrId,
+              usrNm: img.usrNm || "Unknown",
+              type: img.fileNm?.endsWith(".svg")
+                ? "image/svg+xml"
+                : "image/png",
+            });
+          } else {
+            console.warn("유효하지 않은 이미지 데이터:", img);
+          }
+        });
+        ImageFileList = Array.from(uniqueImages.values());
+      }
+
+      imageGallery.innerHTML = "";
+      const myImages = ImageFileList.filter(
+        (img) => img.usrId === currentUsr
+      ).sort((a, b) => b.registDate - a.registDate);
+
+      for (const [index, img] of myImages.entries()) {
+        const button = document.createElement("div");
+        button.classList.add("image-wrapper");
+        button.dataset.index = index;
+        button.dataset.imgId = img.imgId;
+
+        const imgElement = document.createElement("img");
+        imgElement.classList.add("gallery-image");
+
+        const imgData = await fetchImageData(img);
+        if (imgData) {
+          if (img.fileNm?.endsWith(".svg") && img.type === "image/svg+xml") {
+            imgElement.src = await svgToPng(imgData);
+          } else {
+            imgElement.src = imgData;
+          }
+        } else {
+          imgElement.src = "";
+          imgElement.alt = "이미지 로드 실패";
+        }
+
+        button.appendChild(imgElement);
+        button.addEventListener("click", async function () {
+          if (!imgData) {
+            console.error("이미지 데이터가 없습니다:", img);
+            return;
+          }
+
+          let blob =
+            img.type === "image/svg+xml" && !imgData.startsWith("data:")
+              ? new Blob([imgData], { type: "image/svg+xml" })
+              : await (await fetch(imgData)).blob();
+
+          const file = new File([blob], img.fileNm, {
+            type: img.type,
+            lastModified: img.registDate,
+          });
+          await processFiles([file]);
+        });
+
+        imageGallery.appendChild(button);
+      }
+    } catch (error) {
+      console.error("갤러리 업데이트 실패:", error);
+      imageGallery.innerHTML = "";
+      alert("이미지 갤러리 업데이트에 실패했습니다.");
+    }
+  }
+
+  async function openShareGallery() {
+    await updateImageGallery();
+
     const shareGalleryModal = document.createElement("div");
     shareGalleryModal.classList.add("custom-modal-container");
 
-    // 모달 뒷 배경 (오버레이)
     const modalOverlay = document.createElement("div");
     modalOverlay.classList.add("modal-overlay");
     modalOverlay.addEventListener("click", closeShareGallery);
 
-    // 모달 콘텐츠
     const modalContent = document.createElement("div");
-    modalContent.classList.add("modal-content");
+    modalContent.classList.add("custom-modal-content");
 
     const modalHeader = document.createElement("div");
     modalHeader.classList.add("modal-header");
@@ -193,176 +268,432 @@ function images() {
 
     categories.forEach((category) => {
       const selectCategoryButton = document.createElement("button");
-      selectCategoryButton.classList.add("select-category-button");
-      selectCategoryButton.classList.add("btn_w");
+      selectCategoryButton.classList.add("toggle-switch-btn", "btn_w");
       selectCategoryButton.textContent = category.label;
       selectCategoryButton.id = category.name;
-
-      selectCategoryButton.addEventListener("click", function () {
-        const images = getFilteredImagesByCategory(category);
+      selectCategoryButton.addEventListener("click", async (e) => {
+        currentPage = 1;
+        await getFilteredImagesByCategory(category.name, e.currentTarget);
       });
-
       selectCategoryTab.appendChild(selectCategoryButton);
     });
 
     filterBar.appendChild(selectCategoryTab);
 
-    // 검색바
+    const paginationContainer = document.createElement("div");
+    paginationContainer.id = "pagination";
+    paginationContainer.classList.add("pagination-container");
+
     const searchBar = document.createElement("input");
     searchBar.type = "text";
     searchBar.placeholder = "검색어를 입력해주세요.";
     searchBar.classList.add("search-bar");
-
+    searchBar.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        currentPage = 1;
+        filterImagesBySearch(e.target.value);
+      }
+    });
     filterBar.appendChild(searchBar);
-    // 이미지 갤러리
+
     const shareGallery = document.createElement("div");
     shareGallery.classList.add("share-gallery");
 
     const modalFooter = document.createElement("div");
     modalFooter.classList.add("modal-footer");
 
-    // 닫기 버튼
     const closeButton = document.createElement("button");
     closeButton.textContent = "닫기";
-    closeButton.classList.add("close-modal-button");
-    closeButton.classList.add("btn_g");
+    closeButton.classList.add("close-modal-button", "btn_g");
     closeButton.addEventListener("click", closeShareGallery);
     modalFooter.appendChild(closeButton);
 
-    // 모달에 요소 추가
     modalContent.appendChild(modalHeader);
     modalContent.appendChild(filterBar);
     modalContent.appendChild(shareGallery);
+    modalContent.appendChild(paginationContainer);
     modalContent.appendChild(modalFooter);
     shareGalleryModal.appendChild(modalOverlay);
     shareGalleryModal.appendChild(modalContent);
     document.body.appendChild(shareGalleryModal);
 
-    // 공유 갤러리에 이미지 추가 (시간순 정렬)
-    const sortedImages = [...ImageFileList].sort(
-      (a, b) => b.timestamp - a.timestamp
+    myImageButton = document.querySelector("#my-image");
+    shareImageButton = document.querySelector("#share-image");
+    if (myImageButton) {
+      myImageButton.classList.add("active");
+      await getFilteredImagesByCategory("my-image", myImageButton);
+    }
+
+    setTimeout(() => {
+      shareGalleryModal.classList.add("active");
+    }, 10);
+  }
+
+  async function renderShareGallery(imageList) {
+    const shareGallery = document.querySelector(".share-gallery");
+    if (!shareGallery) return;
+
+    shareGallery.innerHTML = "";
+    lastRenderedImages = [];
+
+    const sortedImages = [...imageList].sort(
+      (a, b) => b.registDate - a.registDate
     );
 
-    sortedImages.forEach((img) => {
-      const imageWrapper = document.createElement("div");
-      imageWrapper.classList.add("share-image-wrapper");
+    $("#pagination").pagination({
+      dataSource: sortedImages,
+      pageSize: itemsPerPage,
+      pageRange: 1,
+      showPrevious: true,
+      showNext: true,
+      prevText: "<",
+      nextText: ">",
+      showPageNumbers: true,
+      callback: async function (paginatedImages, pagination) {
+        shareGallery.innerHTML = "";
+        lastRenderedImages = [];
 
-      const imgElement = document.createElement("img");
-      imgElement.src = img.preview;
-      imgElement.classList.add("share-gallery-image");
+        const imgDataPromises = paginatedImages.map(async (img) => ({
+          img,
+          imgData: await fetchImageData(img),
+        }));
+        const imgDataResults = await Promise.all(imgDataPromises);
 
-      const imgTitle = document.createElement("p");
-      imgTitle.textContent = img.title;
-      imgTitle.classList.add("img-title");
+        for (const { img, imgData } of imgDataResults) {
+          const imageWrapper = document.createElement("div");
+          imageWrapper.classList.add("share-image-wrapper");
+          imageWrapper.dataset.imgId = img.imgId;
+          imageWrapper.style.opacity = "0";
 
-      const manageImage = document.createElement("div");
-      manageImage.classList.add("manage-image");
+          if (img.usrId === currentUsr) {
+            imageWrapper.classList.add("is-owner");
+          }
 
-      const saveButton = document.createElement("button");
-      saveButton.textContent = "저장";
-      saveButton.classList.add("save-button");
-      saveButton.classList.add("btn_w");
-      saveButton.addEventListener("click", () => saveImage(img));
+          const imageContent = document.createElement("div");
+          imageContent.classList.add("image-content");
 
-      const deleteButton = document.createElement("button");
-      deleteButton.textContent = "삭제";
-      deleteButton.classList.add("delete-button");
-      deleteButton.classList.add("btn_w");
-      deleteButton.addEventListener("click", () => deleteImage(img));
+          const imgElement = document.createElement("img");
+          if (imgData) {
+            imgElement.src =
+              img.fileNm?.endsWith(".svg") && img.type === "image/svg+xml"
+                ? await svgToPng(imgData)
+                : imgData;
+          } else {
+            imgElement.src = "";
+            imgElement.alt = "이미지 로드 실패";
+          }
+          imgElement.classList.add("share-gallery-image");
 
-      // 다운로드 버튼
-      const downloadButton = document.createElement("button");
-      downloadButton.textContent = "다운로드";
-      downloadButton.classList.add("download-button");
-      downloadButton.classList.add("btn_w");
-      downloadButton.addEventListener("click", () => downloadImage(img));
+          const imgTitle = document.createElement("p");
+          imgTitle.textContent = img.imgNm;
+          imgTitle.classList.add("img-title");
 
-      // 공유 버튼
-      const shareButton = document.createElement("button");
-      shareButton.textContent = "공유";
-      shareButton.classList.add("share-button");
-      shareButton.classList.add("btn_w");
-      shareButton.addEventListener("click", () => shareImage(img));
+          const manageImage = document.createElement("div");
+          manageImage.classList.add("manage-image");
 
-      imageWrapper.appendChild(imgElement);
-      imageWrapper.appendChild(imgTitle);
-      imageWrapper.appendChild(manageImage);
-      manageImage.appendChild(saveButton);
-      manageImage.appendChild(deleteButton);
-      manageImage.appendChild(downloadButton);
-      manageImage.appendChild(shareButton);
-      shareGallery.appendChild(imageWrapper);
+          if (img.shareYn === "N" || img.usrId === currentUsr) {
+            const downloadButton = document.createElement("button");
+            downloadButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="#333" d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 242.7-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7 288 32zM64 352c-35.3 0-64 28.7-64 64l0 32c0 35.3 28.7 64 64 64l384 0c35.3 0 64-28.7 64-64l0-32c0-35.3-28.7-64-64-64l-101.5 0-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352 64 352zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg>`;
+            downloadButton.classList.add("download-button", "btn_w");
+            downloadButton.addEventListener("click", () => downloadImage(img));
+
+            const deleteButton = document.createElement("button");
+            deleteButton.innerHTML = `<svg id="Layer_1" x="0px" y="0px" viewBox="0 0 512 512" xml:space="preserve"><g><g><path fill="white" d="M425.298,51.358h-91.455V16.696c0-9.22-7.475-16.696-16.696-16.696H194.855c-9.22,0-16.696,7.475-16.696,16.696v34.662 H86.704c-9.22,0-16.696,7.475-16.696,16.696v51.357c0,9.22,7.475,16.696,16.696,16.696h5.072l15.26,359.906 c0.378,8.937,7.735,15.988,16.68,15.988h264.568c8.946,0,16.302-7.051,16.68-15.989l15.259-359.906h5.073 c9.22,0,16.696-7.475,16.696-16.696V68.054C441.994,58.832,434.519,51.358,425.298,51.358z M211.551,33.391h88.9v17.967h-88.9 V33.391z M372.283,478.609H139.719l-14.522-342.502h261.606L372.283,478.609z M408.602,102.715c-15.17,0-296.114,0-305.202,0 V84.749h305.202V102.715z"></path></g></g><g><g><path fill="white" d="M188.835,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C205.53,194.779,198.055,187.304,188.835,187.304z"></path></g></g><g><g><path fill="white" d="M255.998,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.474,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C272.693,194.779,265.218,187.304,255.998,187.304z"></path></g></g><g><g><path fill="white" d="M323.161,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 s16.696-7.475,16.696-16.696V204C339.857,194.779,332.382,187.304,323.161,187.304z"></path></g></g></svg>`;
+            deleteButton.classList.add("delete-button", "btn_r");
+            deleteButton.addEventListener("click", () => deleteImage(img));
+
+            const shareButton = document.createElement("button");
+            shareButton.textContent = img.shareYn === "Y" ? "공유해제" : "공유";
+            shareButton.classList.add("share-button", "btn_w");
+            if (img.shareYn === "Y") {
+              shareButton.classList.add("shared");
+            }
+            shareButton.addEventListener("click", () => shareImage(img));
+
+            manageImage.appendChild(downloadButton);
+            manageImage.appendChild(deleteButton);
+            manageImage.appendChild(shareButton);
+          } else {
+            const saveButton = document.createElement("button");
+            saveButton.textContent = "담기";
+            saveButton.classList.add("save-button", "btn_b");
+            saveButton.addEventListener("click", () => saveImage(img));
+
+            const deleteButton = document.createElement("button");
+            deleteButton.innerHTML = `<svg id="Layer_1" x="0px" y="0px" viewBox="0 0 512 512" xml:space="preserve"><g><g><path fill="white" d="M425.298,51.358h-91.455V16.696c0-9.22-7.475-16.696-16.696-16.696H194.855c-9.22,0-16.696,7.475-16.696,16.696v34.662 H86.704c-9.22,0-16.696,7.475-16.696,16.696v51.357c0,9.22,7.475,16.696,16.696,16.696h5.072l15.26,359.906 c0.378,8.937,7.735,15.988,16.68,15.988h264.568c8.946,0,16.302-7.051,16.68-15.989l15.259-359.906h5.073 c9.22,0,16.696-7.475,16.696-16.696V68.054C441.994,58.832,434.519,51.358,425.298,51.358z M211.551,33.391h88.9v17.967h-88.9 V33.391z M372.283,478.609H139.719l-14.522-342.502h261.606L372.283,478.609z M408.602,102.715c-15.17,0-296.114,0-305.202,0 V84.749h305.202V102.715z"></path></g></g><g><g><path fill="white" d="M188.835,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C205.53,194.779,198.055,187.304,188.835,187.304z"></path></g></g><g><g><path fill="white" d="M255.998,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.474,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C272.693,194.779,265.218,187.304,255.998,187.304z"></path></g></g><g><g><path fill="white" d="M323.161,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 s16.696-7.475,16.696-16.696V204C339.857,194.779,332.382,187.304,323.161,187.304z"></path></g></g></svg>`;
+            deleteButton.classList.add("delete-button", "btn_r");
+            deleteButton.style.display = "none";
+
+            const downloadButton = document.createElement("button");
+            downloadButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="#333" d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 242.7-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7 288 32zM64 352c-35.3 0-64 28.7-64 64l0 32c0 35.3 28.7 64 64 64l384 0c35.3 0 64-28.7 64-64l0-32c0-35.3-28.7-64-64-64l-101.5 0-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352 64 352zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg>`;
+            downloadButton.classList.add("download-button", "btn_w");
+            downloadButton.addEventListener("click", () => downloadImage(img));
+
+            const shareButton = document.createElement("button");
+            shareButton.textContent = "공유";
+            shareButton.classList.add("share-button", "btn_w");
+            shareButton.style.display = "none";
+
+            manageImage.appendChild(deleteButton);
+            manageImage.appendChild(downloadButton);
+            manageImage.appendChild(saveButton);
+            manageImage.appendChild(shareButton);
+          }
+
+          imageContent.appendChild(imgElement);
+          imageContent.appendChild(imgTitle);
+          imageWrapper.appendChild(imageContent);
+          imageWrapper.appendChild(manageImage);
+          shareGallery.appendChild(imageWrapper);
+
+          setTimeout(() => {
+            imageWrapper.style.opacity = "1";
+          }, 10);
+
+          lastRenderedImages.push(img);
+        }
+
+        currentPage = pagination.pageNumber;
+      },
     });
   }
 
-  function getFilteredImagesByCategory(category) {
-    if (category.name === "my-image") {
-      // 내 이미지
-      // 내 이미지들 필터링 로직 나중에 구현(이미지 객체에 사용자 정보 및 type(개인, 공유) 추가 필요)
-      console.log("내 이미지 불러오기");
-    } else if (category.name === "share-image") {
-      // 공유 이미지
-      // 공유 이미지들 필터링 로직 나중에 구현
-      console.log("공유 이미지 불러오기");
+  async function renderFilteredImages() {
+    let categoryName;
+    let categoryBtn;
+    if (isMyData) {
+      categoryName = "my-image";
+      categoryBtn = myImageButton;
+    } else {
+      categoryName = "share-image";
+      categoryBtn = shareImageButton;
     }
+
+    await getFilteredImagesByCategory(categoryName, categoryBtn);
+  }
+
+  async function getFilteredImagesByCategory(categoryName, target) {
+    try {
+      if (categoryName === "my-image") {
+        isMyData = true;
+      } else {
+        isMyData = false;
+      }
+
+      const filteredImages = isMyData
+        ? ImageFileList.filter((img) => img.usrId === currentUsr)
+        : ImageFileList.filter((img) => img.shareYn === "Y");
+      currentPage = 1;
+      renderShareGallery(filteredImages);
+      toggleRepoCategory(target);
+    } catch (error) {
+      console.error("이미지 필터링 실패:", error);
+      alert("이미지 필터링에 실패했습니다.");
+    }
+  }
+
+  function filterImagesBySearch(query) {
+    let filteredImages;
+
+    if (isMyData) {
+      filteredImages = ImageFileList.filter(
+        (img) =>
+          img.imgNm.toLowerCase().includes(query.toLowerCase()) &&
+          img.usrId === currentUsr
+      );
+    } else {
+      filteredImages = ImageFileList.filter(
+        (img) =>
+          img.imgNm.toLowerCase().includes(query.toLowerCase()) &&
+          img.shareYn === "Y"
+      );
+    }
+
+    currentPage = 1;
+    renderShareGallery(filteredImages);
   }
 
   function closeShareGallery() {
     const modal = document.querySelector(".custom-modal-container");
-    if (modal) {
-      modal.remove();
+    if (modal) modal.remove();
+  }
+
+  async function saveImage(img) {
+    if (confirm(`"${img.imgNm}"을(를) 저장하시겠습니까?`)) {
+      try {
+        const imgData = await fetchImageData(img);
+        if (!imgData) {
+          throw new Error("이미지 데이터를 가져올 수 없습니다.");
+        }
+        const newImage = {
+          usrId: currentUsr,
+          imgNm: img.imgNm,
+          imgData: imgData,
+          fileNm: img.fileNm,
+          registDate: new Date().getTime(),
+          shareYn: "N",
+        };
+        await saveWgcImg(newImage);
+        await updateImageGallery();
+        await renderFilteredImages();
+        alert(`"${img.imgNm}"을(를) 저장했습니다.`);
+      } catch (error) {
+        console.error("저장 실패:", error);
+        alert("이미지 저장에 실패했습니다.");
+      }
     }
   }
 
-  function saveImage(img) {
-    console.log(img, "저장하기");
+  async function saveDropImage(img) {
+    try {
+      const newImage = {
+        usrId: currentUsr,
+        imgNm: img.imgNm,
+        imgData: img.imgData,
+        fileNm: img.fileNm,
+        registDate: new Date().getTime(),
+        shareYn: "N",
+      };
+      await saveWgcImg(newImage);
+      imageDataCache.set(newImage.imgId, newImage.imgData);
+      await updateImageGallery();
+      await renderFilteredImages();
+    } catch (error) {
+      console.error("저장 실패:", error);
+      alert("이미지 저장에 실패했습니다.");
+    }
   }
 
-  function deleteImage(img) {
-    console.log(img, "삭제하기");
+  async function deleteImage(img) {
+    if (img.usrId !== currentUsr) {
+      alert("본인의 이미지만 삭제할 수 있습니다.");
+      return;
+    }
+
+    if (confirm(`정말로 "${img.imgNm}"을(를) 삭제하시겠습니까?`)) {
+      try {
+        await deleteWgcImg({ imgId: img.imgId });
+        ImageFileList = ImageFileList.filter((i) => i.imgId !== img.imgId);
+        imageDataCache.delete(img.imgId);
+        const totalItems = ImageFileList.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        if (currentPage > totalPages && totalPages > 0) {
+          currentPage = totalPages;
+        } else if (totalPages === 0) {
+          currentPage = 1;
+        }
+        await updateImageGallery();
+        await renderFilteredImages();
+      } catch (error) {
+        console.error("삭제 실패:", error);
+        alert("이미지 삭제에 실패했습니다.");
+      }
+    }
   }
 
-  function downloadImage(img) {
-    console.log(img, "다운로드");
+  async function downloadImage(img) {
+    const imgData = await fetchImageData(img);
+    if (!imgData) {
+      alert("이미지 데이터를 가져올 수 없습니다.");
+      return;
+    }
     const link = document.createElement("a");
-    link.href = img.preview;
-    link.download = img.file.name || "image";
+    link.href = imgData;
+    link.download = img.fileNm || "image";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   }
 
-  function shareImage(img) {
-    console.log(img, "공유하기");
+  async function shareImage(img) {
+    if (img.usrId !== currentUsr) {
+      alert("본인의 이미지만 공유할 수 있습니다.");
+      return;
+    }
+
+    if (img.shareYn === "N") {
+      if (confirm(`정말로 "${img.imgNm}"을(를) 공유하시겠습니까?`)) {
+        try {
+          const imgData = await fetchImageData(img);
+          if (!imgData) {
+            throw new Error("이미지 데이터를 가져올 수 없습니다.");
+          }
+          await deleteWgcImg({ imgId: img.imgId });
+          await saveWgcImg({ ...img, imgData, shareYn: "Y" });
+          imageDataCache.set(img.imgId, imgData);
+          await updateImageGallery();
+          await renderFilteredImages();
+        } catch (error) {
+          console.error("공유 실패:", error);
+          alert("이미지 공유에 실패했습니다.");
+        }
+      }
+    } else if (img.shareYn === "Y") {
+      if (confirm(`정말로 "${img.imgNm}"을(를) 공유 해제하시겠습니까?`)) {
+        try {
+          const imgData = await fetchImageData(img);
+          if (!imgData) {
+            throw new Error("이미지 데이터를 가져올 수 없습니다.");
+          }
+          await deleteWgcImg({ imgId: img.imgId });
+          await saveWgcImg({ ...img, imgData, shareYn: "N" });
+          imageDataCache.set(img.imgId, imgData);
+          await updateImageGallery();
+          await renderFilteredImages();
+        } catch (error) {
+          console.error("공유 해제 실패:", error);
+          alert("이미지 공유해제를 실패했습니다.");
+        }
+      }
+    }
+  }
+
+  function toggleRepoCategory(target) {
+    const selectMyImgButton = document.querySelector("#my-image");
+    const selectShareImgButton = document.querySelector("#share-image");
+
+    if (!selectMyImgButton || !selectShareImgButton) {
+      console.warn("버튼 요소를 찾을 수 없습니다.");
+      return;
+    }
+
+    const isMyImageButton =
+      target.id === "my-image" || target.closest("#my-image");
+    const isShareImageButton =
+      target.id === "share-image" || target.closest("#share-image");
+
+    if (isMyImageButton) {
+      selectMyImgButton.classList.add("active");
+      selectShareImgButton.classList.remove("active");
+    } else if (isShareImageButton) {
+      selectShareImgButton.classList.add("active");
+      selectMyImgButton.classList.remove("active");
+    }
   }
 
   this.containerEl.append(
     `<input id="btn-image-upload" type="file" accept="image/*" multiple hidden>`
   );
 
-  // change 이벤트 수정
   document
     .querySelector(`${this.containerSelector} #btn-image-upload`)
     .addEventListener("change", async function (e) {
       if (e.target.files.length === 0) return;
-
       try {
         const result = await processFiles(e.target.files);
-
         if (result.length > 0) {
-          result.forEach((obj) => {
-            ImageFileList.push(obj); // obj 전체를 추가
+          result.forEach((img) => {
+            saveDropImage({ ...img, usrId: currentUsr, shareYn: "N" });
           });
-          console.log(ImageFileList);
-          // 로컬스토리지에 저장
-          localStorage.setItem("ImageFileList", JSON.stringify(ImageFileList));
         }
-
-        updateImageGallery(); // 갤러리 업데이트
+        await updateImageGallery();
       } catch (error) {
         console.error("파일 업로드 중 오류 발생:", error);
+        alert("파일 업로드에 실패했습니다.");
       }
     });
+
+  updateImageGallery();
 }
 
 export { images };

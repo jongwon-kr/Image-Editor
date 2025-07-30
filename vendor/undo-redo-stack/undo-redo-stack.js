@@ -37,9 +37,6 @@
     return main$1(state || [])
   }
 
-  /**
-   * An undo/redo history manager implemented as two stacks
-   */
   var push = function push(undoStack) {
     return function (val) {
       return undoStack.push(val);
@@ -69,6 +66,12 @@
     };
   };
 
+  var clearRedo = function clearRedo(redoStack) {
+    return function () {
+      redoStack.clear();
+    };
+  };
+
   var latest = function latest(undoStack) {
     return function () {
       return undoStack.current();
@@ -90,6 +93,7 @@
       undo: undo(undoStack, redoStack),
       redo: redo(undoStack, redoStack),
       clear: clear(undoStack, redoStack),
+      clearRedo: clearRedo(redoStack),
       latest: latest(undoStack),
       getValues: getValues(undoStack, redoStack)
     };

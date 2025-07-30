@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { mapArea } from "../api/data/mapArea.js";
 import { retForeImgUrl } from "../api/retForeImgUrl.js";
 import { retModelImgUrl } from "../api/retModelImgUrl.js";
@@ -23,11 +24,11 @@ function weatherData() {
   content.appendChild(title);
 
   // 필요한 요소 생성
-  const inputContainer = document.createElement('div');
-  inputContainer.className = 'input-container';
+  const inputContainer = document.createElement("div");
+  inputContainer.className = "input-container";
 
-  const label = document.createElement('label');
-  label.textContent = '영역 선택';
+  const label = document.createElement("label");
+  label.textContent = "영역 선택";
 
   const options = [
     {
@@ -95,7 +96,6 @@ function weatherData() {
     },
   ];
 
-  // 기상 자료 탭 상태관리
   let activeTabCnt = 0;
 
   tabs.forEach((tab) => {
@@ -111,8 +111,6 @@ function weatherData() {
     const tabContent = document.createElement("div");
     tabContent.classList.add("tab-content");
     tabContent.id = `${tab.id}-content`;
-    // 초기에는 display: none 대신 클래스로 제어
-    // tabContent.style.display = "none"; 제거
 
     const form = createForm(tab.id, tab.api, _self);
     tabContent.appendChild(form);
@@ -121,7 +119,7 @@ function weatherData() {
       const isActive = tabContent.classList.contains("active");
       if (isActive) {
         activeTabCnt--;
-        tabContent.classList.remove("active"); // 닫기
+        tabContent.classList.remove("active");
         tabButton.classList.remove("active");
       } else {
         activeTabCnt++;
@@ -134,7 +132,7 @@ function weatherData() {
           });
           activeTabCnt--;
         }
-        tabContent.classList.add("active"); // 열기
+        tabContent.classList.add("active");
         tabButton.classList.add("active");
       }
     });
@@ -151,7 +149,6 @@ function weatherData() {
     .appendChild(toolPanel);
 }
 
-// 폼 생성 함수 (변경 없음)
 function createForm(tabId, apiService, _self) {
   const form = document.createElement("form");
   form.classList.add("api-form");
@@ -279,7 +276,7 @@ function createForm(tabId, apiService, _self) {
   addButton.type = "button";
   addButton.addEventListener("click", async () => {
     const params = new FormData(form);
-    const keys = params.keys();
+    const keys = Array.from(params.keys());
 
     keys.forEach((key) => {
       selectedMapArea[key] = params.get(key);
@@ -333,14 +330,13 @@ async function fetchData(apiService, params) {
   };
   return result;
 }
-
 function addImageToCanvas(data, label, _self) {
   const reader = new FileReader();
-  reader.onload = function (e) {
+  reader.onload = async function (e) {
     const addDataURL = e.target.result;
     const tempZoom = _self.canvas.getZoom();
-    _self.fitZoom1();
-    fabric.Image.fromURL(addDataURL, function (img) {
+    _self.fitZoom();
+    await fabric.Image.fromURL(addDataURL, function (img) {
       img.set({
         label: label,
         left: 0,

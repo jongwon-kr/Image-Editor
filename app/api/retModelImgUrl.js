@@ -1,10 +1,10 @@
+// @ts-nocheck
+
 /**
  * 통합 기상 분석
  * 모델 이미지 API
  */
 async function retModelImgUrl(params) {
-  console.log("모델 이미지 API");
-
   // 기본 파라미터
   const defaultParams = {
     modl: "GDAPS_KIM",
@@ -28,7 +28,7 @@ async function retModelImgUrl(params) {
     meta: "0",
     symbl: "1",
     contourLineColor: "0x0000ff", // 선 색상
-    contourLineDiv: "A",  // 선 종류
+    contourLineDiv: "A", // 선 종류
     contourLineThck: "1", // 선 두께
   };
 
@@ -36,17 +36,34 @@ async function retModelImgUrl(params) {
     ...Object.assign({}, defaultParams, params),
   });
 
-  const image = await fetch(
-    `http://afs2.kma-dev.go.kr/uwa/iwa/api/iwaImgUrlApi/retModelImgUrl.kaf?${mergedParams.toString()}`
-  );
+  try {
+    showLoader();
+    const image = await fetch(
+      `http://afs2.kma-dev.go.kr/uwa/iwa/api/iwaImgUrlApi/retModelImgUrl.kaf?${mergedParams.toString()}`
+    );
 
-  const response = {
-    image: image,
-    params: mergedParams,
-    apiType: "modelImg",
-  };
+    const response = {
+      image: image,
+      params: mergedParams,
+      apiType: "modelImg",
+    };
 
-  return response;
+    return response;
+  } catch (error) {
+    console.log("조회에 실패하였습니다. 에러 내용:", error);
+  } finally {
+    hideLoader();
+  }
+}
+
+const loader = document.querySelector(".loading");
+
+function showLoader() {
+  loader.style.display = "block";
+}
+
+function hideLoader() {
+  loader.style.display = "none";
 }
 
 export { retModelImgUrl };

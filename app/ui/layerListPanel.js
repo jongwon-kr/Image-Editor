@@ -1,9 +1,16 @@
+// @ts-nocheck
 "use strict";
 
-import { getFilteredFocusObjects, getOverlayImages } from "../utils/utils.js";
+import {
+  bringForward,
+  getFilteredFocusObjects,
+  getOverlayImages,
+  sendBackwards,
+} from "../utils/utils.js";
 import { retForeImgUrl } from "../api/retForeImgUrl.js";
 import { retModelImgUrl } from "../api/retModelImgUrl.js";
 import { retOceanImgUrl } from "../api/retOceanImgUrl.js";
+import { retGridImg } from "../api/retGridImgUrl.js";
 
 function layerListPanel() {
   const _self = this;
@@ -15,7 +22,7 @@ function layerListPanel() {
     "beforeend",
     `<div class="toolpanel layerpanel visible" id="layer-panel">
       <div class="content">
-        <p class="title">레이어</p>
+        <p class="title">레이어 설정</p>
         <div id="select-layer-type"></div>
         <div id="layer-inner-list"></div>
       </div>
@@ -31,10 +38,11 @@ function layerListPanel() {
   const selectObjectTypeButton = document.createElement("button");
   selectObjectTypeButton.id = "select-object-type-button";
   selectObjectTypeButton.value = "object";
-  selectObjectTypeButton.textContent = "요소 레이어";
-  selectObjectTypeButton.classList.add("btn_w");
-  selectObjectTypeButton.addEventListener("click", function () {
+  selectObjectTypeButton.textContent = "객체";
+  selectObjectTypeButton.classList.add("toggle-switch-btn", "btn_w", "active");
+  selectObjectTypeButton.addEventListener("click", function (e) {
     layerType = this.value;
+    toggleLayerType(e.currentTarget);
     updateLayers();
   });
   selectLayerType.appendChild(selectObjectTypeButton);
@@ -42,10 +50,11 @@ function layerListPanel() {
   const selectOverlayTypeButton = document.createElement("button");
   selectOverlayTypeButton.id = "select-overlay-type-button";
   selectOverlayTypeButton.value = "overlay";
-  selectOverlayTypeButton.textContent = "중첩 자료 레이어";
-  selectOverlayTypeButton.classList.add("btn_w");
-  selectOverlayTypeButton.addEventListener("click", function () {
+  selectOverlayTypeButton.textContent = "배경 이미지";
+  selectOverlayTypeButton.classList.add("toggle-switch-btn", "btn_w");
+  selectOverlayTypeButton.addEventListener("click", function (e) {
     layerType = this.value;
+    toggleLayerType(e.currentTarget);
     updateLayers();
   });
   selectLayerType.appendChild(selectOverlayTypeButton);
@@ -56,10 +65,21 @@ function layerListPanel() {
     );
     layerList.innerHTML = "";
     let objects = getFilteredFocusObjects().filter(
-      (obj) => !obj.isControlPoint
+      (obj) => !obj.isControlPoint && !obj.overlayImage
     );
     if (layerType === "overlay") {
       objects = getOverlayImages();
+      getOverlayImages().forEach((o) => {
+        o.selectable = true;
+        o.evented = true;
+      });
+      _self.canvas.perPixelTargetFind = true;
+    } else {
+      getOverlayImages().forEach((o) => {
+        o.selectable = false;
+        o.evented = false;
+      });
+      _self.canvas.perPixelTargetFind = false;
     }
 
     objects.forEach((object, index) => {
@@ -67,29 +87,125 @@ function layerListPanel() {
         object.id = `obj-${Date.now()}-${index}`;
       }
       const objectId = object.id;
-      const isGroup = object.type === "group";
-      const label =
-        object.label ||
-        (isGroup
-          ? `그룹 (${object.getObjects().length}개 합쳐짐)`
-          : `이름을 작성해주세요`);
+      const label = object.label || `Layer ${index + 1}`;
+
+      const isHidden = !object.visible;
+      const hideButtonClass = isHidden ? "hide-object active" : "hide-object";
+
+      const actionButton =
+        layerType === "object"
+          ? `<button class="layer-button delete" title="삭제">
+          <svg id="Layer_1" x="0px" y="0px" viewBox="-25 -25 700 700" xml:space="preserve">
+            <g>
+              <g>
+                <path fill="red" d="M425.298,51.358h-91.455V16.696c0-9.22-7.475-16.696-16.696-16.696H194.855c-9.22,0-16.696,7.475-16.696,16.696v34.662 H86.704c-9.22,0-16.696,7.475-16.696,16.696v51.357c0,9.22,7.475,16.696,16.696,16.696h5.072l15.26,359.906 c0.378,8.937,7.735,15.988,16.68,15.988h264.568c8.946,0,16.302-7.051,16.68-15.989l15.259-359.906h5.073 c9.22,0,16.696-7.475,16.696-16.696V68.054C441.994,58.832,434.519,51.358,425.298,51.358z M211.551,33.391h88.9v17.967h-88.9 V33.391z M372.283,478.609H139.719l-14.522-342.502h261.606L372.283,478.609z M408.602,102.715c-15.17,0-296.114,0-305.202,0 V84.749h305.202V102.715z"></path>
+              </g>
+            </g>
+            <g>
+              <g>
+                <path fill="red" d="M188.835,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C205.53,194.779,198.055,187.304,188.835,187.304z"></path>
+              </g>
+            </g>
+            <g>
+              <g>
+                <path fill="red" d="M255.998,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.474,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C272.693,194.779,265.218,187.304,255.998,187.304z"></path>
+              </g>
+            </g>
+            <g>
+              <g>
+                <path fill="red" d="M323.161,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 s16.696-7.475,16.696-16.696V204C339.857,194.779,332.382,187.304,323.161,187.304z"></path>
+              </g>
+            </g>
+          </svg>
+        </button>`
+          : `<button class="layer-button open-setting" title="설정"></button>`;
 
       layerList.insertAdjacentHTML(
         "afterbegin",
         `
-          <div class="layer" data-object="${objectId}">
-            <div class="layer-name">
-              <input class="layer-custom-name" value="${label}">
-              <div class="layer-options">
-                <button class="open-setting btn_w" title="설정">S</button>
-                <button class="move-up btn_w" title="위로 올리기">↑</button>
-                <button class="move-down btn_w" title="내리기">↓</button>
-                <button class="hide-object btn_w" title="숨기기">H</button>
-              </div>
+        <div class="layer" data-object="${objectId}" draggable="true">
+          <button class="layer-button ${hideButtonClass}" type="button"></button>
+          <div class="layer-name">
+            <input class="layer-custom-name" value="${label}">
+            <div class="layer-options">
+              <button class="layer-button move-up" title="위로 올리기"></button>
+              <button class="layer-button move-down" title="내리기"></button>
+              ${actionButton}
             </div>
           </div>
-        `
+        </div>
+      `
       );
+    });
+
+    const layers = layerList.querySelectorAll(".layer");
+    layers.forEach((layer) => {
+      layer.addEventListener("dragstart", (e) => {
+        e.dataTransfer.setData("text/plain", layer.getAttribute("data-object"));
+        layer.classList.add("dragging");
+      });
+
+      layer.addEventListener("dragend", () => {
+        layer.classList.remove("dragging");
+        layerList
+          .querySelectorAll(".layer")
+          .forEach((el) => el.classList.remove("drop-target"));
+      });
+
+      layer.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        layer.classList.add("drop-target");
+      });
+
+      layer.addEventListener("dragleave", () => {
+        layer.classList.remove("drop-target");
+      });
+
+      layer.addEventListener("drop", (e) => {
+        e.preventDefault();
+        layer.classList.remove("drop-target");
+        const draggedId = e.dataTransfer.getData("text/plain");
+        const droppedId = layer.getAttribute("data-object");
+
+        if (draggedId === droppedId) return;
+
+        const draggedLayer = layerList.querySelector(
+          `.layer[data-object="${draggedId}"]`
+        );
+        const droppedLayer = layerList.querySelector(
+          `.layer[data-object="${droppedId}"]`
+        );
+        const allLayers = Array.from(layerList.querySelectorAll(".layer"));
+
+        const draggedIndex = allLayers.indexOf(draggedLayer);
+        const droppedIndex = allLayers.indexOf(droppedLayer);
+
+        if (draggedIndex < droppedIndex) {
+          layerList.insertBefore(draggedLayer, droppedLayer.nextSibling);
+        } else {
+          layerList.insertBefore(draggedLayer, droppedLayer);
+        }
+
+        const draggedObject = _self.canvas
+          .getObjects()
+          .find((obj) => obj.id === draggedId);
+        const droppedObject = _self.canvas
+          .getObjects()
+          .find((obj) => obj.id === droppedId);
+
+        if (draggedObject && droppedObject) {
+          const canvasObjects = _self.canvas.getObjects();
+          const draggedCanvasIndex = canvasObjects.indexOf(draggedObject);
+          const droppedCanvasIndex = canvasObjects.indexOf(droppedObject);
+
+          _self.canvas.remove(draggedObject);
+          _self.canvas.insertAt(draggedObject, droppedCanvasIndex);
+          _self.canvas.fire("object:modified");
+          _self.canvas.renderAll();
+        }
+
+        updateLayers();
+      });
     });
 
     const activeObjects = _self.canvas.getActiveObjects();
@@ -99,11 +215,85 @@ function layerListPanel() {
           `${_self.containerSelector} .layer[data-object="${obj.id}"]`
         );
         if (selectedLayer) selectedLayer.classList.add("layer-selected");
-      } else {
-        console.warn("Active object missing ID:", obj);
       }
     });
   };
+
+  document
+    .querySelector(`${_self.containerSelector} #layer-inner-list`)
+    .addEventListener("click", (e) => {
+      const button = e.target.closest(".layer-button");
+      const layer = e.target.closest(".layer");
+      if (!layer) return;
+
+      const objectId = layer.getAttribute("data-object");
+      const object = _self.canvas
+        .getObjects()
+        .find((obj) => obj.id === objectId);
+      if (!object) return;
+
+      if (button) {
+        if (button.classList.contains("hide-object")) {
+          object.set({ visible: !object.visible });
+          button.classList.toggle("active", !object.visible);
+          _self.canvas.fire("object:modified");
+          _self.canvas.renderAll();
+        } else if (button.classList.contains("move-up")) {
+          bringForward(object, _self.canvas);
+          _self.canvas.fire("object:modified");
+        } else if (button.classList.contains("move-down")) {
+          sendBackwards(object, _self.canvas);
+          _self.canvas.fire("object:modified");
+        } else if (button.classList.contains("open-setting")) {
+          if (
+            object.overlayImage &&
+            confirm(`"${object.label}"을(를) 편집 하시겠습니까?`)
+          ) {
+            try {
+              editObject(object);
+            } catch (error) {
+              console.error("편집 모드 전환 실패:", error);
+            }
+          }
+        } else if (button.classList.contains("delete")) {
+          if (confirm(`"${object.label}"을(를) 삭제하시겠습니까?`)) {
+            _self.canvas.remove(object);
+            _self.canvas.discardActiveObject().renderAll();
+            _self.canvas.fire("object:modified");
+            try {
+              alert(`"${object.label}" 가 삭제되었습니다.`);
+            } catch (error) {
+              console.error("삭제 실패:", error);
+              alert("삭제하는 데 실패했습니다.");
+            }
+          }
+        }
+        return;
+      }
+
+      if (
+        !e.target.classList.contains("move-up") &&
+        !e.target.classList.contains("move-down") &&
+        !e.target.classList.contains("hide-object") &&
+        !e.target.classList.contains("open-setting") &&
+        !e.target.classList.contains("delete") &&
+        !layer.classList.contains("layer-selected")
+      ) {
+        const selectedObject = _self.canvas
+          .getObjects()
+          .find((obj) => obj.id === objectId);
+        if (!selectedObject) return;
+
+        const activeObject = _self.canvas.getActiveObject();
+        if (activeObject === selectedObject) {
+          _self.canvas.discardActiveObject(selectedObject);
+        } else {
+          _self.canvas.setActiveObject(selectedObject);
+        }
+        _self.canvas.renderAll();
+        updateLayers();
+      }
+    });
 
   _self.canvas.on("object:added", (e) => {
     if (e.target && !e.target.id) {
@@ -120,36 +310,6 @@ function layerListPanel() {
       .querySelectorAll(`${_self.containerSelector} .layer`)
       .forEach((el) => el.classList.remove("layer-selected"));
   });
-
-  document
-    .querySelector(`${_self.containerSelector} #layer-inner-list`)
-    .addEventListener("click", (e) => {
-      const layer = e.target.closest(".layer");
-      if (
-        !layer ||
-        e.target.classList.contains("move-up") ||
-        e.target.classList.contains("move-down") ||
-        e.target.classList.contains("hide-object") ||
-        e.target.classList.contains("open-setting-") ||
-        layer.classList.contains("layer-selected")
-      )
-        return;
-
-      const objectId = layer.getAttribute("data-object");
-      const selectedObject = _self.canvas
-        .getObjects()
-        .find((obj) => obj.id === objectId);
-      if (!selectedObject) return;
-
-      const activeObject = _self.canvas.getActiveObject();
-      if (activeObject === selectedObject) {
-        _self.canvas.discardActiveObject(selectedObject);
-      } else {
-        _self.canvas.setActiveObject(selectedObject);
-      }
-      _self.canvas.requestRenderAll();
-      updateLayers();
-    });
 
   document
     .querySelector(`${_self.containerSelector} #layer-inner-list`)
@@ -192,43 +352,6 @@ function layerListPanel() {
       true
     );
 
-  document
-    .querySelector(`${_self.containerSelector} #layer-inner-list`)
-    .addEventListener("click", (e) => {
-      const button = e.target;
-      const layer = button.closest(".layer");
-      if (!layer) return;
-
-      const objectId = layer.getAttribute("data-object");
-      const object = _self.canvas
-        .getObjects()
-        .find((obj) => obj.id === objectId);
-      if (!object) return;
-
-      if (button.classList.contains("hide-object")) {
-        object.visible = !object.visible;
-        button.style.backgroundColor = object.visible ? "#ccc" : "#fff";
-        _self.canvas.renderAll();
-      } else if (button.classList.contains("move-up")) {
-        const index = _self.canvas.getObjects().indexOf(object);
-        if (index < _self.canvas.getObjects().length - 1) {
-          _self.canvas.moveTo(object, index + 1);
-          updateLayers();
-        }
-      } else if (button.classList.contains("move-down")) {
-        const index = _self.canvas.getObjects().indexOf(object);
-        if (index > 0) {
-          _self.canvas.moveTo(object, index - 1);
-          updateLayers();
-        }
-      } else if (button.classList.contains("open-setting")) {
-        if (object.overlayImage) {
-          console.log("중첩 자료 입니다.");
-          openOverlayImageSettingModal(object);
-        }
-      }
-    });
-
   function openOverlayImageSettingModal(object) {
     const modal = document.createElement("div");
     modal.id = "overlay-image-setting-modal";
@@ -241,17 +364,11 @@ function layerListPanel() {
 
     const tabs = [
       { api: retModelImgUrl, id: "modelImg" },
-      {
-        api: retOceanImgUrl,
-        id: "oceanImg",
-      },
-      {
-        api: retForeImgUrl,
-        id: "foreImg",
-      },
+      { api: retOceanImgUrl, id: "oceanImg" },
+      { api: retForeImgUrl, id: "foreImg" },
+      { api: retGridImg, id: "gridImg" },
     ];
 
-    let activeTabCnt = 0;
     let tab;
     tabs.forEach((t) => {
       if (t.id == object.apiType) {
@@ -284,12 +401,12 @@ function layerListPanel() {
 
     const form = createForm(object.apiType, tab.api, object, _self);
     tabContent.appendChild(form);
-    console.log(object);
 
     tabWrapper.appendChild(tabHeader);
     tabWrapper.appendChild(tabContent);
     tabContainer.appendChild(tabWrapper);
     content.appendChild(tabContainer);
+    modal泳;
     modal.appendChild(content);
     document.body.appendChild(modal);
   }
@@ -300,158 +417,59 @@ function layerListPanel() {
 
     let fields = [];
     if (tabId === "modelImg") {
+      fields = [];
+    } else if (tabId === "oceanImg") {
+      fields = [];
+    } else if (tabId === "foreImg") {
+      fields = [];
+    } else if (tabId === "gridImg") {
       fields = [
-        {
-          label: "모델",
-          name: "modl",
-          type: "select",
-          options: ["GDAPS_KIM", "RDAPS", "LDAPS"],
-          value: object.params.get("modl") || "GDAPS_KIM",
-        },
-        {
-          label: "자료 구분",
-          name: "varGrp",
-          type: "select",
-          options: ["PRSS_HGT", "UNIS_SFC"],
-          value: object.params.get("varGrp") || "PRSS_HGT",
-        },
-        {
-          label: "변수",
-          name: "var",
-          type: "select",
-          options: ["HGT", "TMP"],
-          value: object.params.get("var") || "HGT",
-        },
-        {
-          label: "연직층",
-          name: "lev",
-          type: "select",
-          options: ["1000", "850", "500"],
-          value: object.params.get("lev") || "1000",
-        },
-        {
-          label: "분석 시간",
-          name: "analTime",
-          type: "text",
-          value: object.params.get("analTime") || "201905180000",
-        },
-        {
-          label: "예측 시간",
-          name: "foreTime",
-          type: "text",
-          value: object.params.get("foreTime") || "201905180000",
-        },
         {
           label: "선 색상",
           name: "contourLineColor",
-          type: "color",
-          value: object.params.get("contourLineColor") || "0x0000ff",
+          type: "select",
+          options: [
+            { value: "0x000000", label: "검정" },
+            { value: "0xFF0000", label: "빨강" },
+            { value: "0x0000FF", label: "파랑" },
+          ],
+          value:
+            (object.params instanceof Map
+              ? object.params.get("contourLineColor")
+              : object.params?.contourLineColor) || "0x000000",
         },
         {
           label: "선 종류",
           name: "contourLineDiv",
           type: "select",
-          options: ["A", "D", "H"],
-          value: object.params.get("contourLineDiv") || "A",
+          options: [
+            { value: "D", label: "짧은 점선" },
+            { value: "A", label: "실선" },
+            { value: "H", label: "긴 점선" },
+          ],
+          value:
+            (object.params instanceof Map
+              ? object.params.get("contourLineDiv")
+              : object.params?.contourLineDiv) || "D",
         },
         {
           label: "선 두께",
           name: "contourLineThck",
           type: "select",
-          options: ["1", "2", "3", "4", "5", "6", "7", "8"],
-          value: object.params.get("contourLineThck") || "1",
-        },
-        {
-          label: "스무딩 레벨",
-          name: "basicSmtLvl",
-          type: "select",
-          options: ["1", "2", "3", "4"],
-          value: object.params.get("basicSmtLvl") || "1",
-        },
-        {
-          label: "평활 횟수",
-          name: "basicTotSmtLvl",
-          type: "text",
-          value: object.params.get("basicTotSmtLvl") || "5",
-        },
-      ];
-    } else if (tabId === "oceanImg") {
-      fields = [
-        {
-          label: "모델 그룹",
-          name: "modlGrp",
-          type: "select",
-          options: ["GWW", "RWW"],
-          value: object.params.get("modlGrp") || "GWW",
-        },
-        {
-          label: "상세 모델",
-          name: "modl",
-          type: "select",
-          options: ["GWW3", "ECMWF_HWAM"],
-          value: object.params.get("modl") || "GWW3",
-        },
-        {
-          label: "변수",
-          name: "var",
-          type: "select",
-          options: ["WSPD_SNW", "WVHGT"],
-          value: object.params.get("var") || "WSPD_SNW",
-        },
-        {
-          label: "분석 시간",
-          name: "analTime",
-          type: "text",
-          value: object.params.get("analTime") || "201705110000",
-        },
-        {
-          label: "예측 시간",
-          name: "foreTime",
-          type: "text",
-          value: object.params.get("foreTime") || "201705110000",
-        },
-      ];
-    } else if (tabId === "foreImg") {
-      fields = [
-        {
-          label: "자료 그룹",
-          name: "varGrp",
-          type: "select",
-          options: ["UNIS_SFC_WBT", "INSTB_IDX"],
-          value: object.params.get("varGrp") || "UNIS_SFC_WBT",
-        },
-        {
-          label: "변수",
-          name: "var",
-          type: "select",
-          options: ["WBT", "CAPE"],
-          value: object.params.get("var") || "WBT",
-        },
-        {
-          label: "모델",
-          name: "modl",
-          type: "select",
-          options: ["GDAPS_KIM", "RDAPS"],
-          value: object.params.get("modl") || "GDAPS_KIM",
-        },
-        {
-          label: "연직층",
-          name: "lev",
-          type: "select",
-          options: ["2", "850"],
-          value: object.params.get("lev") || "2",
-        },
-        {
-          label: "분석 시간",
-          name: "analTime",
-          type: "text",
-          value: object.params.get("analTime") || "201905180000",
-        },
-        {
-          label: "예측 시간",
-          name: "foreTime",
-          type: "text",
-          value: object.params.get("foreTime") || "201905180000",
+          options: [
+            { value: "1", label: "1" },
+            { value: "2", label: "2" },
+            { value: "3", label: "3" },
+            { value: "4", label: "4" },
+            { value: "5", label: "5" },
+            { value: "6", label: "6" },
+            { value: "7", label: "7" },
+            { value: "8", label: "8" },
+          ],
+          value:
+            (object.params instanceof Map
+              ? object.params.get("contourLineThck")
+              : object.params?.contourLineThck) || "1",
         },
       ];
     }
@@ -476,9 +494,13 @@ function layerListPanel() {
     updateButton.type = "button";
     updateButton.addEventListener("click", async () => {
       const params = new FormData(form);
-      const updatedParams = new URLSearchParams(object.params);
+      const updatedParams = new URLSearchParams(
+        object.params instanceof Map
+          ? Object.fromEntries(object.params)
+          : object.params || {}
+      );
       for (const [key, value] of params) {
-        if (key == "contourLineColor" && value.startsWith("#")) {
+        if (key === "contourLineColor" && value.startsWith("#")) {
           updatedParams.set(key, "0x" + value.slice(1));
         } else {
           updatedParams.set(key, value);
@@ -503,9 +525,10 @@ function layerListPanel() {
     select.name = name;
     options.forEach((opt) => {
       const option = document.createElement("option");
-      option.value = opt;
-      option.textContent = opt;
-      if (opt === selectedValue) option.selected = true;
+      option.value = opt.value;
+      option.label = opt.label;
+      option.textContent = opt.label;
+      if (opt.value === selectedValue) option.selected = true;
       select.appendChild(option);
     });
     return select;
@@ -540,9 +563,6 @@ function layerListPanel() {
         showAlpha: false,
         allowEmpty: false,
         preferredFormat: "hex",
-        // 색상표 표출
-        // showPalette: true,
-        // palette: [["#000", "#fff"]],
         move: function (color) {
           input.value = color.toHexString();
         },
@@ -567,6 +587,21 @@ function layerListPanel() {
     return input;
   }
 
+  function editObject(object) {
+    let anotherObjects = _self.canvas
+      .getObjects()
+      .filter((obj) => obj.id !== object.id);
+
+    anotherObjects = anotherObjects
+      .filter((obj) => obj.visible === true)
+      .forEach((obj) => {
+        obj.visible = false;
+      });
+
+    _self.canvas.setActiveObject(object);
+    _self.canvas.renderAll();
+  }
+
   async function fetchData(apiService, params) {
     const response = await apiService(params);
     return {
@@ -585,6 +620,35 @@ function layerListPanel() {
       });
     };
     reader.readAsDataURL(data.image);
+  }
+
+  function toggleLayerType(target) {
+    const selectObjectButton = document.querySelector(
+      "#select-object-type-button"
+    );
+    const selectOverlayButton = document.querySelector(
+      "#select-overlay-type-button"
+    );
+
+    if (!selectObjectButton || !selectOverlayButton) {
+      console.warn("버튼 요소를 찾을 수 없습니다.");
+      return;
+    }
+
+    const isObjectButton =
+      target.id === "select-object-type-button" ||
+      target.closest("#select-object-type-button");
+    const isOverlayButton =
+      target.id === "select-overlay-type-button" ||
+      target.closest("#select-overlay-type-button");
+
+    if (isObjectButton) {
+      selectObjectButton.classList.add("active");
+      selectOverlayButton.classList.remove("active");
+    } else if (isOverlayButton) {
+      selectOverlayButton.classList.add("active");
+      selectObjectButton.classList.remove("active");
+    }
   }
 
   updateLayers();

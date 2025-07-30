@@ -1,10 +1,10 @@
+// @ts-nocheck
 "use strict";
 
 import SwapColor from "../utils/swapColorFilter.js";
 
 function colorFilter() {
   const _self = this;
-  console.log("this", this);
 
   const mainPanel = document.querySelector(
     `${this.containerSelector} .main-panel`
@@ -57,8 +57,8 @@ function colorFilter() {
     }
 
     if (modified) {
-      canvas.renderAll();
       canvas.fire("object:modified");
+      canvas.renderAll();
     } else {
       console.warn("No valid image targets found to apply SwapColor filter.");
     }
@@ -74,11 +74,9 @@ function colorFilter() {
       swapColorFilter.colorSource = e.target.value;
     });
 
-  document
-    .getElementById("destColorPicker")
-    .addEventListener("change", (e) => {
-      swapColorFilter.colorDestination = e.target.value;
-    });
+  document.getElementById("destColorPicker").addEventListener("change", (e) => {
+    swapColorFilter.colorDestination = e.target.value;
+  });
 
   document.getElementById("applyColorSwap").addEventListener("click", () => {
     applyColorSwap(_self.canvas);
@@ -131,16 +129,6 @@ function colorFilter() {
         isPickingSource = !isPickingSource;
       };
       img.src = dataUrl;
-    }
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && e.key.toLowerCase() === "c") {
-      _self.canvas.isColorSelectionMode = !_self.canvas.isColorSelectionMode;
-      _self.canvas.defaultCursor = _self.canvas.isColorSelectionMode
-        ? "crosshair"
-        : "default";
-      console.log("Color Selection Mode:", _self.canvas.isColorSelectionMode);
     }
   });
 }

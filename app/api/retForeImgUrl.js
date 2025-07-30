@@ -1,10 +1,10 @@
+// @ts-nocheck
+
 /**
  * 통합 기상 분석
  * 예측 변수 이미지 API
  */
 async function retForeImgUrl(params) {
-  console.log("예측 변수 이미지 API");
-
   // 기본 파라미터
   const defaultParams = {
     varGrp: "UNIS_SFC_WBT",
@@ -30,17 +30,34 @@ async function retForeImgUrl(params) {
     ...Object.assign({}, defaultParams, params),
   });
 
-  const image = await fetch(
-    `http://afs2.kma-dev.go.kr/uwa/iwa/api/iwaImgUrlApi/retForeImgUrl.kaf?${mergedParams.toString()}`
-  );
+  try {
+    showLoader();
+    const image = await fetch(
+      `http://afs2.kma-dev.go.kr/uwa/iwa/api/iwaImgUrlApi/retForeImgUrl.kaf?${mergedParams.toString()}`
+    );
 
-  const response = {
-    image: image,
-    params: mergedParams,
-    apiType: "foreImg",
-  };  
+    const response = {
+      image: image,
+      params: mergedParams,
+      apiType: "foreImg",
+    };
 
-  return response;
+    return response;
+  } catch (error) {
+    console.log("조회에 실패하였습니다. 에러 내용:", error);
+  } finally {
+    hideLoader();
+  }
+}
+
+const loader = document.querySelector(".loading");
+
+function showLoader() {
+  loader.style.display = "block";
+}
+
+function hideLoader() {
+  loader.style.display = "none";
 }
 
 export { retForeImgUrl };

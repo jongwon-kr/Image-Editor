@@ -1,4 +1,26 @@
-import { imgEditor } from "../index.js";
+// @ts-nocheck
+import { imgEditor } from "../index.ts";
+import {
+  attachControlPoints as attachLineControlPoints,
+  bindControlPoints as bindLineControlPoints,
+  updateControlPoints as updateLineControlPoints,
+} from "../drawing-tools/drawingLine.js";
+import {
+  attachControlPoints as attachArrowControlPoints,
+  bindControlPoints as bindArrowControlPoints,
+  updateControlPoints as updateArrowControlPoints,
+} from "../drawing-tools/drawingArrow.js";
+import {
+  attachControlPoints as attachPathControlPoints,
+  bindControlPoints as bindPathControlPoints,
+  updateControlPoints as updatePathControlPoints,
+} from "../drawing-tools/drawingPath.js";
+import {
+  attachControlPoints as attachWeatherFrontControlPoints,
+  bindControlPoints as bindFrontControlPoints,
+  updateControlPoints as updateWeatherFrontControlPoints,
+  generateWeatherFrontPath,
+} from "../drawing-tools/drawingWeatherFront.js";
 
 /**
  * 여러 유틸들 정의
@@ -111,29 +133,26 @@ async function getRealBBox(obj) {
       x1 = w,
       x2 = 0;
 
-    // Find y1 (top edge)
     for (y = 0; y < h; y++) {
       for (x = 0; x < w; x++) {
         if (data[y * w + x] & 0xff000000) {
           y1 = y;
-          y = h; // Exit outer loop
+          y = h;
           break;
         }
       }
     }
 
-    // Find y2 (bottom edge)
     for (y = h - 1; y > y1; y--) {
       for (x = 0; x < w; x++) {
         if (data[y * w + x] & 0xff000000) {
           y2 = y;
-          y = 0; // Exit outer loop
+          y = 0;
           break;
         }
       }
     }
 
-    // Find x1 (left edge)
     for (y = y1; y < y2; y++) {
       for (x = 0; x < w; x++) {
         if (x < x1 && data[y * w + x] & 0xff000000) {
@@ -143,7 +162,6 @@ async function getRealBBox(obj) {
       }
     }
 
-    // Find x2 (right edge)
     for (y = y1; y < y2; y++) {
       for (x = w - 1; x > x1; x--) {
         if (x > x2 && data[y * w + x] & 0xff000000) {
@@ -163,7 +181,7 @@ async function getRealBBox(obj) {
     };
   };
 
-  const data = await getImageData(obj.toDataURL());
+  const data = await getImageData(await obj.toDataURL());
   return scanPixels(data);
 }
 
@@ -178,75 +196,132 @@ async function alignObject(canvas, activeSelection, pos) {
   canvasElement.style.display = "none";
 
   const tempZoom = canvas.getZoom();
-
   imgEditor.applyZoom(1);
 
   const bound = activeSelection.getBoundingRect();
   const realBound = await getRealBBox(activeSelection);
+  let moveLeft = 0;
+  let moveTop = 0;
 
   switch (pos) {
     case "left":
-      activeSelection.set(
-        "left",
-        activeSelection.left - bound.left - realBound.x1
-      );
+      moveLeft = -bound.left - realBound.x1;
+      activeSelection.set("left", activeSelection.left + moveLeft);
+      alignControlPoints(canvas, activeSelection, moveLeft, 0);
       break;
     case "center-h":
-      activeSelection.set(
-        "left",
-        activeSelection.left -
-          bound.left -
-          realBound.x1 +
-          canvas.width / 2 -
-          realBound.width / 2
-      );
+      moveLeft =
+        -bound.left - realBound.x1 + canvas.width / 2 - realBound.width / 2;
+      activeSelection.set("left", activeSelection.left + moveLeft);
+      alignControlPoints(canvas, activeSelection, moveLeft, 0);
       break;
     case "right":
-      activeSelection.set(
-        "left",
-        activeSelection.left -
-          bound.left -
-          realBound.x1 +
-          canvas.width -
-          realBound.width
-      );
+      moveLeft = -bound.left - realBound.x1 + canvas.width - realBound.width;
+      activeSelection.set("left", activeSelection.left + moveLeft);
+      alignControlPoints(canvas, activeSelection, moveLeft, 0);
       break;
     case "top":
-      activeSelection.set(
-        "top",
-        activeSelection.top - bound.top - realBound.y1
-      );
+      moveTop = -bound.top - realBound.y1;
+      activeSelection.set("top", activeSelection.top + moveTop);
+      alignControlPoints(canvas, activeSelection, 0, moveTop);
       break;
     case "center-v":
-      activeSelection.set(
-        "top",
-        activeSelection.top -
-          bound.top -
-          realBound.y1 +
-          canvas.height / 2 -
-          realBound.height / 2
-      );
+      moveTop =
+        -bound.top - realBound.y1 + canvas.height / 2 - realBound.height / 2;
+      activeSelection.set("top", activeSelection.top + moveTop);
+      alignControlPoints(canvas, activeSelection, 0, moveTop);
       break;
     case "bottom":
-      activeSelection.set(
-        "top",
-        activeSelection.top -
-          bound.top -
-          realBound.y1 +
-          (canvas.height - realBound.height)
-      );
+      moveTop = -bound.top - realBound.y1 + (canvas.height - realBound.height);
+      activeSelection.set("top", activeSelection.top + moveTop);
+      alignControlPoints(canvas, activeSelection, 0, moveTop);
       break;
     default:
       return;
   }
 
   activeSelection.setCoords();
+
+  if (!activeSelection._objects) {
+    canvas.discardActiveObject();
+    canvas.renderAll();
+    canvas.setActiveObject(activeSelection);
+    canvas.renderAll();
+  }
   imgEditor.applyZoom(tempZoom);
   canvasElement.style.display = "block";
-  canvas.renderAll();
   canvas.fire("object:modified");
+  canvas.renderAll();
 }
 
+async function alignControlPoints(canvas, activeSelection, moveLeft, moveTop) {
+  if (!moveLeft) moveLeft = 0;
+  if (!moveTop) moveTop = 0;
+
+  if (!activeSelection._objects) {
+    // 단일 객체
+    if (activeSelection.type === "path") {
+      setControlPointsPositionByPathType(
+        canvas,
+        activeSelection,
+        moveLeft,
+        moveTop
+      );
+    }
+  } else {
+    // 그룹 객체
+    activeSelection._objects.forEach((object) => {
+      if (object.type === "path") {
+        setControlPointsPositionByPathType(canvas, object, moveLeft, moveTop);
+      }
+    });
+  }
+}
+
+function setControlPointsPositionByPathType(canvas, object, moveLeft, moveTop) {
+  if (object.pathType === "line" || object.pathType === "arrow") {
+    // 제어점 생성 및 추가
+    const startPoint = {
+      x: object.p0.left + moveLeft + 7.5,
+      y: object.p0.top + moveTop + 7.5,
+    };
+    const endPoint = {
+      x: object.p2.left + moveLeft + 7.5,
+      y: object.p2.top + moveTop + 7.5,
+    };
+    const midPoint = object.p1
+      ? { x: object.p1.left + moveLeft + 7.5, y: object.p1.top + moveTop + 7.5 }
+      : null;
+
+    // 기존 제어점 제거
+    if (object.p0) canvas.remove(object.p0);
+    if (object.p1) canvas.remove(object.p1);
+    if (object.p2) canvas.remove(object.p2);
+
+    // 새 제어점 생성 및 바인딩
+    const attachControlPointsFunc =
+      object.pathType === "line"
+        ? attachLineControlPoints
+        : attachArrowControlPoints;
+    attachControlPointsFunc(
+      canvas,
+      object,
+      startPoint,
+      endPoint,
+      midPoint,
+      0,
+      0
+    );
+  } else if (object.pathType === "polygon") {
+    attachPathControlPoints(canvas, object, moveLeft, moveTop);
+  } else if (object.pathType === "weatherFront") {
+    if (object.shapeObjects) {
+      object.shapeObjects.forEach((shape) => canvas.remove(shape));
+      object.shapeObjects = [];
+    }
+    attachWeatherFrontControlPoints(canvas, object, moveLeft, moveTop);
+  }
+}
 /**
  * Get the filters of the current image selection
  * @param {fabric.Object} activeSelection - Fabric.js object
@@ -376,7 +451,13 @@ function getActiveFontStyle(activeSelection, styleName) {
 function setActiveFontStyle(activeSelection, styleName, value) {
   if (activeSelection.setSelectionStyles && activeSelection.isEditing) {
     const style = { [styleName]: value };
-    activeSelection.setSelectionStyles(style);
+    if (styleName === "fontSize") {
+      activeSelection.setSelectionStyles(style);
+    } else if (styleName === "lineHeight" || styleName === "charSpacing") {
+      activeSelection.set(styleName, value);
+    } else {
+      activeSelection.setSelectionStyles(style);
+    }
     activeSelection.setCoords();
   } else {
     activeSelection.set(styleName, value);
@@ -449,7 +530,21 @@ function getFilteredNoFocusObjects() {
 
 // 중첩자료 객체 추출
 function getOverlayImages() {
-  let objects = imgEditor.canvas.getObjects().filter((obj) => obj.overlayImage);
+  let objects = imgEditor.canvas
+    .getObjects()
+    .filter((obj) => obj.overlayImage === true);
+  return objects;
+}
+
+// 중첩자료 객체 추출
+function getFrontShapes() {
+  let objects = imgEditor.canvas.getObjects().filter((obj) => obj.frontShape);
+  return objects;
+}
+
+// 중첩자료 객체 추출
+function getDeleteArea() {
+  let objects = imgEditor.canvas.getObjects().filter((obj) => obj.isDelete);
   return objects;
 }
 
@@ -459,6 +554,179 @@ function getControlPoint() {
     .getObjects()
     .filter((obj) => obj.isControlPoint);
   return objects;
+}
+
+function restoreControlPoints(canvas, obj) {
+  if (obj.type !== "path") return;
+  const startPoint = obj.p0
+    ? { x: obj.p0.left + 7.5, y: obj.p0.top + 7.5 }
+    : null;
+  const endPoint = obj.p2
+    ? { x: obj.p2.left + 7.5, y: obj.p2.top + 7.5 }
+    : null;
+  const midPoint = obj.p1
+    ? { x: obj.p1.left + 7.5, y: obj.p1.top + 7.5 }
+    : null;
+
+  if (obj.pathType === "line") {
+    attachLineControlPoints(canvas, obj, startPoint, endPoint, midPoint);
+  } else if (obj.pathType === "arrow") {
+    attachArrowControlPoints(canvas, obj, startPoint, endPoint, midPoint);
+  } else if (obj.pathType === "polygon") {
+    attachPathControlPoints(canvas, obj);
+  } else if (obj.pathType === "weatherFront") {
+    attachWeatherFrontControlPoints(canvas, obj);
+    generateWeatherFrontPath(obj, canvas);
+  }
+}
+
+fabric.Object.prototype.toObject = (function (toObject) {
+  return function (propertiesToInclude) {
+    propertiesToInclude = propertiesToInclude || [];
+    // 기본 속성과 사용자 정의 속성 병합
+    propertiesToInclude = propertiesToInclude.concat([
+      "name",
+      "p0",
+      "p1",
+      "p2",
+      "noFocusing",
+      "apiType",
+      "isControlPoint",
+      "frontShape",
+      "controlPoints",
+      "pathType",
+      "params",
+      "id",
+      "label",
+      "visible",
+      "apiType",
+      "overlayImage",
+      "startHead",
+      "endHead",
+      "frontType",
+      "pathD",
+      "shapeObjects",
+      "frontShape",
+      "isReflect",
+      "isDelete",
+      "isScaledInGroup",
+      "lastTransformMatrix",
+    ]);
+    return toObject.call(this, propertiesToInclude);
+  };
+})(fabric.Object.prototype.toObject);
+
+function canvasToJsonData(data) {
+  if (!data) {
+    console.warn("캔버스 데이터가 유효하지 않습니다.");
+    return { objects: [] };
+  }
+  const canvasJSON = data.toJSON([
+    "name",
+    "p0",
+    "p1",
+    "p2",
+    "noFocusing",
+    "apiType",
+    "isControlPoint",
+    "frontShape",
+    "controlPoints",
+    "pathType",
+    "params",
+    "id",
+    "label",
+    "visible",
+    "apiType",
+    "overlayImage",
+    "startHead",
+    "endHead",
+    "frontType",
+    "pathD",
+    "shapeObjects",
+    "frontShape",
+    "isReflect",
+    "isDelete",
+    "viewportTransform",
+    "width",
+    "height",
+    "isScaledInGroup",
+    "lastTransformMatrix",
+  ]);
+  return canvasJSON;
+}
+
+function updateScaleControlPoints(fabricCanvas) {
+  if (!fabricCanvas) {
+    console.error("Canvas is not initialized");
+    return;
+  }
+  const zoom = fabricCanvas.getZoom();
+  const controlPoints = fabricCanvas
+    .getObjects()
+    .filter((o) => o.isControlPoint);
+  controlPoints.forEach((point) => {
+    point.set({
+      scaleX: 1 / zoom,
+      scaleY: 1 / zoom,
+    });
+    point.setCoords();
+  });
+}
+
+function toggleGroup(canvas) {
+  const activeObject = canvas.getActiveObject();
+  if (!activeObject) return;
+
+  if (activeObject.type === "group") {
+    canvas.remove(activeObject);
+    const items = activeObject._objects;
+    items.forEach((obj) => canvas.add(obj));
+    const selection = new fabric.ActiveSelection(items, { canvas });
+    canvas.setActiveObject(selection);
+  } else {
+    const objects = canvas.getActiveObjects();
+    if (objects.length > 1) {
+      canvas.discardActiveObject();
+      const group = new fabric.Group(objects, {
+        originX: activeObject.left,
+        originY: activeObject.top,
+      });
+      objects.forEach((obj) => canvas.remove(obj));
+      canvas.add(group);
+      canvas.setActiveObject(group);
+    }
+  }
+  canvas.renderAll();
+}
+
+function bringToFront(obj, canvas) {
+  const objects = canvas.getObjects();
+  const index = objects.indexOf(obj);
+  if (index === -1) return;
+
+  objects.splice(index, 1);
+  objects.push(obj);
+  canvas.requestRenderAll();
+}
+
+function bringForward(obj, canvas) {
+  const objects = canvas.getObjects();
+  const index = objects.indexOf(obj);
+  if (index <= 0) return;
+
+  let temp = objects[index];
+  objects[index - 1] = objects[index];
+  objects[index] = temp;
+}
+
+function sendBackwards(obj, canvas) {
+  const objects = canvas.getObjects();
+  const index = objects.indexOf(obj);
+  if (index >= objects.length) return;
+
+  let temp = objects[index];
+  objects[index + 1] = objects[index];
+  objects[index] = temp;
 }
 
 export {
@@ -474,5 +742,14 @@ export {
   getFilteredFocusObjects,
   getFilteredNoFocusObjects,
   getOverlayImages,
+  getFrontShapes,
   getControlPoint,
+  restoreControlPoints,
+  canvasToJsonData,
+  getDeleteArea,
+  updateScaleControlPoints,
+  bringToFront,
+  toggleGroup,
+  bringForward,
+  sendBackwards,
 };

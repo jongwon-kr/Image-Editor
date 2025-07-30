@@ -1,4 +1,6 @@
-import { imgEditor } from "../index.js";
+// @ts-nocheck
+import { imgEditor } from "../index.ts";
+import { updateScaleControlPoints } from "./utils.js";
 
 /**
  * 줌 기능 정의
@@ -24,8 +26,6 @@ function zoom() {
       <div id="zoom-value">${Math.round(currentZoomLevel * 100)}%</div>
     `;
     footerbar.appendChild(zoomContainer);
-  } else {
-    console.log("footerbar is null");
   }
 
   document.querySelector("#zoom-fit")?.addEventListener("click", () => {
@@ -51,51 +51,53 @@ function zoom() {
   const maxZoom = 3;
 
   imgEditor.applyZoom = (zoom) => {
-    imgEditor.canvas.setZoom(zoom);
-    imgEditor.canvas.setWidth(
-      imgEditor.canvas.originalW * imgEditor.canvas.getZoom()
-    );
-    imgEditor.canvas.setHeight(
-      imgEditor.canvas.originalH * imgEditor.canvas.getZoom()
-    );
-    imgEditor.inputZoomLevel(zoom);
+    currentZoomLevel = Math.max(minZoom, Math.min(maxZoom, zoom));
+    _self.canvas.setZoom(currentZoomLevel);
+    if (!_self.canvas.backgroundImage) {
+      _self.canvas.setWidth(_self.canvas.originalW * currentZoomLevel);
+      _self.canvas.setHeight(_self.canvas.originalH * currentZoomLevel);
+    } else {
+      _self.canvas.setWidth(
+        _self.canvas.backgroundImage.width * currentZoomLevel
+      );
+      _self.canvas.setHeight(
+        _self.canvas.backgroundImage.height * currentZoomLevel
+      );
+    }
+    _self.inputZoomLevel(currentZoomLevel);
+    updateScaleControlPoints(_self.canvas);
+    _self.canvas.renderAll();
+    imgEditor.updateInputFields();
   };
 
   imgEditor.fitZoom = () => {
-    const container = document.querySelector(
-      imgEditor.containerSelector + " .main-panel"
-    );
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
-    const canvasWidth = imgEditor.canvas.originalW;
-    const canvasHeight = imgEditor.canvas.originalH;
-    const widthRatio = containerWidth / canvasWidth;
-    const heightRatio = containerHeight / canvasHeight;
-    const newZoom = Math.min(widthRatio, heightRatio) - 0.1;
-    const clampedZoom = Math.max(minZoom, Math.min(maxZoom, newZoom)).toFixed(
-      2
-    );
-    imgEditor.applyZoom(clampedZoom);
-  };
-
-  imgEditor.fitZoom1 = () => {
-    imgEditor.applyZoom(1);
-  };
-
-  document.addEventListener("keydown", (e) => {
-    if (e.ctrlKey) {
-      e.preventDefault();
-      let updatedZoom = imgEditor.canvas.getZoom() * 100;
-      if (e.key === "-" || e.keyCode === 189) {
-        updatedZoom = Math.max(minZoom * 100, updatedZoom - 25);
-      } else if (e.key === "+" || e.keyCode === 187) {
-        updatedZoom = Math.min(maxZoom * 100, updatedZoom + 25);
-      } else if (e.key === "0" || e.keyCode === 48 || e.keyCode === 96) {
-        updatedZoom = 100;
-      }
-      imgEditor.applyZoom(updatedZoom / 100);
+    if (!_self.canvas.backgroundImage) {
+      _self.canvas.setWidth(_self.canvas.originalW * currentZoomLevel);
+      _self.canvas.setHeight(_self.canvas.originalH * currentZoomLevel);
+    } else {
+      _self.canvas.setWidth(
+        _self.canvas.backgroundImage.width * currentZoomLevel
+      );
+      _self.canvas.setHeight(
+        _self.canvas.backgroundImage.height * currentZoomLevel
+      );
     }
-  });
+    _self.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    _self.applyZoom(1);
+  };
+
+  imgEditor.inputZoomLevel = (zoom) => {
+    const inputZoomLevel = document.querySelector(
+      _self.containerSelector + " #input-zoom-level"
+    );
+    const zoomValueDisplay = document.querySelector(
+      _self.containerSelector + " #zoom-value"
+    );
+    if (inputZoomLevel && zoomValueDisplay) {
+      inputZoomLevel.value = zoom;
+      zoomValueDisplay.textContent = `${Math.round(zoom * 100)}%`;
+    }
+  };
 
   document.addEventListener(
     "wheel",
@@ -103,24 +105,13 @@ function zoom() {
       if (!e.ctrlKey) return;
       e.preventDefault();
       let zoomChange = e.deltaY > 0 ? -5 : 5;
-      let updatedZoom = (imgEditor.canvas.getZoom() * 100 + zoomChange) / 100;
+      let updatedZoom = (currentZoomLevel * 100 + zoomChange) / 100;
       if (updatedZoom >= minZoom && updatedZoom <= maxZoom) {
-        imgEditor.applyZoom(updatedZoom);
+        _self.applyZoom(updatedZoom);
       }
     },
     { passive: false }
   );
-
-  imgEditor.inputZoomLevel = (zoom) => {
-    const inputZoomLevel = document.querySelector(
-      imgEditor.containerSelector + " #input-zoom-level"
-    );
-    if (inputZoomLevel) {
-      inputZoomLevel.value = zoom;
-      document.querySelector("#zoom-value").textContent =
-        Math.round(zoom * 100) + "%";
-    }
-  };
 }
 
 export { zoom };

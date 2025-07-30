@@ -1,11 +1,8 @@
-import { imgEditor } from "../index.js";
+// @ts-nocheck
+import { imgEditor } from "../index.ts";
 
-/**
- * jpg, png, svg 파일 처리
- */
 function processFiles(files) {
   return new Promise((resolve) => {
-    // files가 유효한지 확인
     if (
       !files ||
       (typeof files !== "object" && !Array.isArray(files)) ||
@@ -39,19 +36,16 @@ function processFiles(files) {
         reader.onload = (f) => {
           fabric.loadSVGFromString(f.target.result, (objects, options) => {
             let obj = fabric.util.groupSVGElements(objects, options);
-            pushToFileList(obj, file, f.target.result);
+            pushToFileList(file, f.target.result);
 
-            obj
-              .set({
-                left: centerX,
-                top: centerY,
-              })
-              .setCoords();
+            if (file.name) {
+              obj.set({ label: file.name.split(".")[0] });
+            }
 
+            obj.set({ left: centerX, top: centerY }).setCoords();
             canvas.add(obj);
-            canvas.setActiveObject(obj);
-            canvas.renderAll();
             canvas.fire("object:modified");
+            canvas.renderAll();
 
             pending--;
             if (pending === 0) resolve(fileList);
@@ -59,23 +53,21 @@ function processFiles(files) {
         };
         reader.readAsText(file);
       } else {
-        reader.onload = (f) => {
-          fabric.Image.fromURL(f.target.result, (img) => {
-            pushToFileList(img, file, f.target.result);
+        reader.onload = async (f) => {
+          await fabric.Image.fromURL(f.target.result, (img) => {
+            pushToFileList(file, f.target.result);
+
+            if (file.name) {
+              img.set({ label: file.name.split(".")[0] });
+            }
 
             img.scaleToHeight(300);
             img.scaleToWidth(300);
-            img
-              .set({
-                left: centerX,
-                top: centerY,
-              })
-              .setCoords();
+            img.set({ left: centerX, top: centerY }).setCoords();
 
             canvas.add(img);
-            canvas.setActiveObject(img);
-            canvas.renderAll();
             canvas.fire("object:modified");
+            canvas.renderAll();
 
             pending--;
             if (pending === 0) resolve(fileList);
@@ -85,20 +77,14 @@ function processFiles(files) {
       }
     }
 
-    function pushToFileList(obj, f, fileData) {
-      let fileObj = {
-        preview: obj.toDataURL({
-          format: "png",
-          multiplier: 0.2,
-        }),
-        file: {
-          name: f.name,
-          type: f.type,
-          size: f.size,
-          lastModified: f.lastModified,
-          data: fileData,
-        },
-        timestamp: new Date().getTime(),
+    async function pushToFileList(file, imgData) {
+      const fileObj = {
+        imgNm: file.name.split(".")[0],
+        imgData: imgData,
+        fileNm: file.name,
+        registDate: new Date().getTime(),
+        shareYn: "N",
+        type: file.type,
       };
       fileList.push(fileObj);
     }

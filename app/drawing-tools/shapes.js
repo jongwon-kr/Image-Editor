@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 /**
  * 도형 그리기
  */
@@ -41,18 +43,23 @@ const Shapes = [
   `<svg viewBox="0 -5 100 100" x="0px" y="0px"><path fill="none" stroke="#000" stroke-width="8" d="M55.2785222,56.3408313 C51.3476874,61.3645942 45.2375557,64.5921788 38.3756345,64.5921788 C31.4568191,64.5921788 25.3023114,61.3108505 21.3754218,56.215501 C10.6371566,55.0276798 2.28426396,45.8997866 2.28426396,34.8156425 C2.28426396,27.0769445 6.35589452,20.2918241 12.4682429,16.4967409 C14.7287467,7.0339786 23.2203008,0 33.3502538,0 C38.667844,0 43.5339584,1.93827732 47.284264,5.14868458 C51.0345695,1.93827732 55.9006839,0 61.2182741,0 C73.0769771,0 82.6903553,9.6396345 82.6903553,21.5307263 C82.6903553,22.0787821 82.6699341,22.6220553 82.629813,23.1598225 C87.1459866,27.1069477 90,32.9175923 90,39.396648 C90,51.2877398 80.3866218,60.9273743 68.5279188,60.9273743 C63.5283115,60.9273743 58.9277995,59.2139774 55.2785222,56.3408313 L55.2785222,56.3408313 Z M4.79695431,82 C7.44623903,82 9.59390863,80.6668591 9.59390863,79.0223464 C9.59390863,77.3778337 7.44623903,76.0446927 4.79695431,76.0446927 C2.1476696,76.0446927 0,77.3778337 0,79.0223464 C0,80.6668591 2.1476696,82 4.79695431,82 Z M13.7055838,71.9217877 C18.4995275,71.9217877 22.3857868,69.4606044 22.3857868,66.424581 C22.3857868,63.3885576 18.4995275,60.9273743 13.7055838,60.9273743 C8.91163999,60.9273743 5.02538071,63.3885576 5.02538071,66.424581 C5.02538071,69.4606044 8.91163999,71.9217877 13.7055838,71.9217877 Z"></path></svg>`,
 ];
 
-const categories = [{ name: "도형", values: Shapes }];
+const categories = [];
 
 async function loadStampsData() {
   try {
     const response = await fetch("/ias/js/wgc/json/stamps.json");
     const data = await response.json();
+    const wResponse = await fetch("/ias/js/wgc/json/weatherIcon.json");
+    const wIcon = await wResponse.json();
     categories.push({ name: "일기도 기호", values: data["일기도 기호"] });
+    categories.push({ name: "한반도", values: data["한반도"] });
+    categories.push({ name: "날씨 아이콘", values: wIcon });
     categories.push({ name: "날씨 기호", values: data["날씨 기호"] });
-    categories.push({ name: "도형 기호", values: data["도형 기호"] });
+    categories.push({ name: "화살표", values: data["도형 기호"] });
+    categories.push({ name: "기본 도형", values: Shapes });
     categories.push({ name: "기타", values: data["기타"] });
   } catch (error) {
-    console.error("Failed to load stamps.json:", error);
+    console.error("Failed to load JSON data:", error);
   }
 }
 
@@ -69,7 +76,6 @@ function shapes() {
   );
   if (!mainPanel) return;
 
-  // Shapes 패널 추가
   mainPanel.insertAdjacentHTML(
     "beforeend",
     `
@@ -86,7 +92,6 @@ function shapes() {
   const categoryList = document.createElement("div");
   categoryList.classList.add("category-list");
 
-  // 카테고리와 해당 값들을 렌더링
   CategoryList.forEach((category) => {
     const name = category.name;
     const values = category.values;
@@ -106,73 +111,80 @@ function shapes() {
     values.forEach((item) => {
       const button = document.createElement("div");
       button.classList.add("button");
+      if (name === "한반도") {
+        button.classList.add("korea");
+      }
 
-      if (typeof item === "string") {
-        // SVG 문자열 처리 (기존 Shapes 배열)
-        button.innerHTML = item;
-        button.addEventListener("click", function () {
-          const svg = this.innerHTML;
+      if (typeof item === "string" || (item && item.svg)) {
+        const svgContent = item.svg || item;
+        button.innerHTML = svgContent;
+        button.addEventListener("click", async function () {
           try {
-            fabric.loadSVGFromString(svg, (objects, options) => {
-              const obj = fabric.util.groupSVGElements(objects, options);
-              obj.strokeUniform = true;
-              obj.strokeLineJoin = "miter";
-              obj.scaleToWidth(100);
-              obj.scaleToHeight(100);
+            // v6.7.0: Use Promise-based loadSVGFromString
+            const parsed = await fabric.loadSVGFromString(svgContent);
+            const obj = fabric.util.groupSVGElements(
+              parsed.objects,
+              parsed.options
+            );
+            obj.scaleToWidth(100);
+            obj.scaleToHeight(100);
 
-              // 뷰포트 기준 중심 계산
-              const vpt = _self.canvas.viewportTransform;
-              const zoom = vpt[0]; // 줌 레벨
-              const canvasWidth = _self.canvas.width / zoom;
-              const canvasHeight = _self.canvas.height / zoom;
-              const centerX = canvasWidth / 2 - vpt[4] / zoom;
-              const centerY = canvasHeight / 2 - vpt[5] / zoom;
+            const vpt = _self.canvas.viewportTransform;
+            const zoom = vpt[0];
+            const canvasWidth = _self.canvas.width / zoom;
+            const canvasHeight = _self.canvas.height / zoom;
+            const centerX = canvasWidth / 2 - 50 - vpt[4] / zoom;
+            const centerY = canvasHeight / 2 - 50 - vpt[5] / zoom;
 
-              obj.set({
-                left: centerX,
-                top: centerY,
-              });
-
-              _self.canvas.setActiveObject(obj);
-              _self.canvas.add(obj).renderAll();
-              _self.canvas.fire("object:modified");
+            obj.set({
+              left: centerX,
+              top: centerY,
+              ...(item.desc && { desc: item.desc }),
             });
-          } catch (_) {
-            console.error("can't add shape");
+            _self.canvas.add(obj);
+            _self.canvas.setActiveObject(obj); // Optional: Select the added object
+            _self.canvas.fire("object:modified");
+            _self.canvas.renderAll();
+          } catch (error) {
+            console.error("Failed to add SVG shape:", error);
           }
         });
       } else if (item.src) {
         const img = document.createElement("img");
         img.src = item.src;
-        img.style.width = "42px";
-        img.style.height = "42px";
+        if (name === "한반도") {
+          img.style.height = "70px";
+        }
         button.appendChild(img);
 
-        button.addEventListener("click", function () {
+        button.addEventListener("click", async function () {
           try {
-            fabric.Image.fromURL(item.src, (imgObj) => {
-              imgObj.scaleToWidth(100);
-              imgObj.scaleToHeight(100);
-
-              const vpt = _self.canvas.viewportTransform;
-              const zoom = vpt[0]; // 줌 레벨
-              const canvasWidth = _self.canvas.width / zoom;
-              const canvasHeight = _self.canvas.height / zoom;
-              const centerX = canvasWidth / 2 - vpt[4] / zoom;
-              const centerY = canvasHeight / 2 - vpt[5] / zoom;
-
-              imgObj.set({
-                left: centerX,
-                top: centerY,
-              });
-
-              console.log("imgObj", imgObj);
-              _self.canvas.setActiveObject(imgObj);
-              _self.canvas.add(imgObj).renderAll();
-              _self.canvas.fire("object:modified");
+            // v6.7.0: Use Promise-based Image.fromURL
+            const imgObj = await fabric.Image.fromURL(item.src, {
+              crossOrigin: "anonymous", // Add if images are from a different domain
             });
+            imgObj.scaleToWidth(100);
+            imgObj.scaleToHeight(100);
+
+            const vpt = _self.canvas.viewportTransform;
+            const zoom = vpt[0];
+            const canvasWidth = _self.canvas.width / zoom;
+            const canvasHeight = _self.canvas.height / zoom;
+            const centerX = canvasWidth / 2 - 50 - vpt[4] / zoom;
+            const centerY = canvasHeight / 2 - 50 - vpt[5] / zoom;
+
+            imgObj.set({
+              left: centerX,
+              top: centerY,
+              ...(item.desc && { desc: item.desc }),
+            });
+
+            _self.canvas.add(imgObj);
+            _self.canvas.setActiveObject(imgObj); // Optional: Select the added object
+            _self.canvas.fire("object:modified");
+            _self.canvas.renderAll();
           } catch (error) {
-            console.error("can't add weather icon:", error);
+            console.error("Failed to add image:", error);
           }
         });
       }
