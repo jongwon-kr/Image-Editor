@@ -4,10 +4,12 @@ import { updatePathFromControlPoints as updateArrowPathFromControlPoints } from 
 import {
   alignObject,
   getActiveFontStyle,
+  getControlPoint,
   getFilteredFocusObjects,
+  groupObjects,
   restoreControlPoints,
   setActiveFontStyle,
-  toggleGroup,
+  ungroupObjects,
 } from "../utils/utils.js";
 import { processObjects } from "./canvas.js";
 
@@ -1229,7 +1231,11 @@ function selectionSettings() {
         `${this.containerSelector} .toolpanel#select-panel .object-options #bring-fwd`
       )
       .addEventListener("click", () => {
-        this.canvas.bringForward(this.activeSelection);
+        this.canvas.bringObjectForward(this.activeSelection);
+        const controlPoints = getControlPoint();
+        if (controlPoints.length > 0) {
+          controlPoints.forEach((cp) => this.canvas.bringObjectToFront(cp));
+        }
         this.canvas.fire("object:modified");
         this.canvas.renderAll();
       });
@@ -1240,7 +1246,11 @@ function selectionSettings() {
         `${this.containerSelector} .toolpanel#select-panel .object-options #bring-back`
       )
       .addEventListener("click", () => {
-        this.canvas.sendBackwards(this.activeSelection);
+        this.canvas.sendObjectBackwards(this.activeSelection);
+        const controlPoints = getControlPoint();
+        if (controlPoints.length > 0) {
+          controlPoints.forEach((cp) => this.canvas.bringObjectToFront(cp));
+        }
         this.canvas.fire("object:modified");
         this.canvas.renderAll();
       });
@@ -1588,7 +1598,7 @@ function selectionSettings() {
         `${this.containerSelector} .toolpanel#select-panel .object-options #group`
       )
       .addEventListener("click", () => {
-        toggleGroup(this.canvas);
+        groupObjects(this.canvas);
         this.canvas.fire("object:modified");
         this.canvas.renderAll();
       });
@@ -1599,7 +1609,7 @@ function selectionSettings() {
         `${this.containerSelector} .toolpanel#select-panel .object-options #ungroup`
       )
       .addEventListener("click", () => {
-        toggleGroup(this.canvas);
+        ungroupObjects(this.canvas);
         this.canvas.fire("object:modified");
       });
 

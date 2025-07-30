@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { imgEditor } from "../index.ts";
-import { bringToFront, updateScaleControlPoints } from "../utils/utils.js";
+import { updateScaleControlPoints } from "../utils/utils.js";
 import { updateControlPointsAndPath } from "./drawingArrow.js";
 
 let isControl = false;
@@ -104,7 +104,7 @@ function generateWeatherFrontPath(front, fabricCanvas) {
     front.shapeObjects.forEach((obj) => fabricCanvas.remove(obj));
   }
   front.shapeObjects = [];
-
+  
   const defaultSpacing = 24;
   const defaultShapeSize = 8;
 
@@ -563,7 +563,7 @@ function attachWeatherFrontEventHandlers(fabricCanvas, front) {
     if (this.controlPoints) {
       this.controlPoints.forEach((p) => {
         p.set({ visible: true });
-        bringToFront(p, fabricCanvas);
+        fabricCanvas.bringObjectToFront(p);
       });
     }
     isControl = false;
@@ -587,7 +587,7 @@ function attachWeatherFrontEventHandlers(fabricCanvas, front) {
     updateControlPoints(this);
     generateWeatherFrontPath(this, fabricCanvas);
     updateWeatherFrontDimensions(this);
-    this.controlPoints.forEach((p) => bringToFront(p, fabricCanvas));
+    this.controlPoints.forEach((p) => fabricCanvas.bringObjectToFront(p));
     fabricCanvas.renderAll();
   });
 
@@ -976,7 +976,7 @@ function bindControlPoints(front) {
     updateControlPoints(front);
     generateWeatherFrontPath(front, front.canvas);
     updateWeatherFrontDimensions(front);
-    front.controlPoints.forEach((p) => bringToFront(p, front.canvas));
+    front.controlPoints.forEach((p) => front.canvas.bringObjectToFront(p));
     front.canvas.renderAll();
   });
 
@@ -1110,7 +1110,7 @@ function attachControlPointEvents(fabricCanvas, front) {
       isControl = true;
       updateWeatherFrontFromControlPoints(front, point);
       bindControlPoints(front);
-      front.controlPoints.forEach((p) => bringToFront(p, fabricCanvas));
+      front.controlPoints.forEach((p) => fabricCanvas.bringObjectToFront(p));
     });
 
     point.on("selected", () => {
@@ -1121,7 +1121,7 @@ function attachControlPointEvents(fabricCanvas, front) {
       generateWeatherFrontPath(front, fabricCanvas);
       front.controlPoints.forEach((p) => {
         p.set({ visible: true });
-        bringToFront(p, fabricCanvas);
+        fabricCanvas.bringObjectToFront(p);
       });
       fabricCanvas.renderAll();
     });
@@ -1137,7 +1137,7 @@ function attachControlPointEvents(fabricCanvas, front) {
     point.on("mouseup", () => {
       fabricCanvas.setActiveObject(front);
       generateWeatherFrontPath(front, fabricCanvas);
-      front.controlPoints.forEach((p) => bringToFront(p, fabricCanvas));
+      front.controlPoints.forEach((p) => fabricCanvas.bringObjectToFront(p));
       fabricCanvas.renderAll();
     });
   });

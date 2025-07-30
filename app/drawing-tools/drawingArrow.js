@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { imgEditor } from "../index.ts";
-import { bringToFront, updateScaleControlPoints } from "../utils/utils.js";
+import { updateScaleControlPoints } from "../utils/utils.js";
 
 function createControlPoint(left, top, line, isMidPoint = false) {
   return new fabric.Circle({
@@ -483,7 +483,7 @@ function attachControlPointEvents(fabricCanvas, line, p0, p2, p1) {
     point.on("selected", () => {
       Object.values({ p0, p2, p1 }).forEach((p) => {
         p?.set({ visible: true });
-        bringToFront(p, fabricCanvas);
+        fabricCanvas.bringObjectToFront(p);
       });
       fabricCanvas.renderAll();
     });
@@ -613,7 +613,7 @@ function attachControlPointEvents(fabricCanvas, line, p0, p2, p1) {
       }
       Object.values(getCP()).forEach((p) => {
         p?.set({ visible: true });
-        bringToFront(p, fabricCanvas);
+        fabricCanvas.bringObjectToFront(p);
       });
       isControl = false;
     }
@@ -672,7 +672,7 @@ function attachControlPointEvents(fabricCanvas, line, p0, p2, p1) {
 
           [temp.p0, temp.p2, temp.p1].forEach((p) => {
             p?.set({ visible: true });
-            bringToFront(p, fabricCanvas);
+            fabricCanvas.bringObjectToFront(p);
           });
           fabricCanvas.renderAll();
         }

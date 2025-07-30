@@ -583,7 +583,6 @@ function restoreControlPoints(canvas, obj) {
 fabric.Object.prototype.toObject = (function (toObject) {
   return function (propertiesToInclude) {
     propertiesToInclude = propertiesToInclude || [];
-    // 기본 속성과 사용자 정의 속성 병합
     propertiesToInclude = propertiesToInclude.concat([
       "name",
       "p0",
@@ -673,60 +672,28 @@ function updateScaleControlPoints(fabricCanvas) {
   });
 }
 
-function toggleGroup(canvas) {
-  const activeObject = canvas.getActiveObject();
-  if (!activeObject) return;
-
-  if (activeObject.type === "group") {
-    canvas.remove(activeObject);
-    const items = activeObject._objects;
-    items.forEach((obj) => canvas.add(obj));
-    const selection = new fabric.ActiveSelection(items, { canvas });
-    canvas.setActiveObject(selection);
-  } else {
-    const objects = canvas.getActiveObjects();
-    if (objects.length > 1) {
-      canvas.discardActiveObject();
-      const group = new fabric.Group(objects, {
-        originX: activeObject.left,
-        originY: activeObject.top,
-      });
-      objects.forEach((obj) => canvas.remove(obj));
-      canvas.add(group);
-      canvas.setActiveObject(group);
-    }
-  }
+function groupObjects(canvas) {
+  if (!canvas) return;
+  const objects = canvas.getActiveObjects();
+  if (objects.length <= 1) return;
+  objects.forEach((obj) => canvas.remove(obj));
+  canvas.discardActiveObject();
+  const group = new fabric.Group(objects);
+  canvas.add(group);
+  canvas.setActiveObject(group);
   canvas.renderAll();
 }
 
-function bringToFront(obj, canvas) {
-  const objects = canvas.getObjects();
-  const index = objects.indexOf(obj);
-  if (index === -1) return;
-
-  objects.splice(index, 1);
-  objects.push(obj);
-  canvas.requestRenderAll();
-}
-
-function bringForward(obj, canvas) {
-  const objects = canvas.getObjects();
-  const index = objects.indexOf(obj);
-  if (index <= 0) return;
-
-  let temp = objects[index];
-  objects[index - 1] = objects[index];
-  objects[index] = temp;
-}
-
-function sendBackwards(obj, canvas) {
-  const objects = canvas.getObjects();
-  const index = objects.indexOf(obj);
-  if (index >= objects.length) return;
-
-  let temp = objects[index];
-  objects[index + 1] = objects[index];
-  objects[index] = temp;
+function ungroupObjects(canvas) {
+  if (!canvas) return;
+  const object = canvas.getActiveObject();
+  if (!object || !object.isType("group")) return;
+  canvas.remove(object);
+  const objects = [...object.removeAll()];
+  const selection = new fabric.ActiveSelection(objects, { canvas });
+  objects.forEach((obj) => canvas.add(obj));
+  canvas.setActiveObject(selection);
+  canvas.renderAll();
 }
 
 export {
@@ -748,8 +715,6 @@ export {
   canvasToJsonData,
   getDeleteArea,
   updateScaleControlPoints,
-  bringToFront,
-  toggleGroup,
-  bringForward,
-  sendBackwards,
+  groupObjects,
+  ungroupObjects,
 };

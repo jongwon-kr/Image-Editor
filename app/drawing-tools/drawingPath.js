@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { imgEditor } from "../index.ts";
-import { bringToFront, updateScaleControlPoints } from "../utils/utils.js";
+import { updateScaleControlPoints } from "../utils/utils.js";
 
 let isControl = false;
 let isScale = false;
@@ -155,7 +155,7 @@ function attachPathEventHandlers(fabricCanvas, path) {
     if (this.controlPoints) {
       this.controlPoints.forEach((p) => {
         p.set({ visible: true });
-        bringToFront(p, fabricCanvas);
+        fabricCanvas.bringObjectToFront(p);
       });
     }
     isControl = false;
@@ -173,7 +173,7 @@ function attachPathEventHandlers(fabricCanvas, path) {
 
   path.on("moving", function () {
     updateControlPoints(this);
-    this.controlPoints.forEach((p) => bringToFront(p, fabricCanvas));
+    this.controlPoints.forEach((p) => fabricCanvas.bringObjectToFront(p));
     fabricCanvas.renderAll();
   });
 
@@ -503,7 +503,7 @@ function attachControlPointEvents(fabricCanvas, path) {
     point.on("selected", () => {
       path.controlPoints.forEach((p) => {
         p.set({ visible: true });
-        bringToFront(p, fabricCanvas);
+        fabricCanvas.bringObjectToFront(p);
       });
       fabricCanvas.renderAll();
     });

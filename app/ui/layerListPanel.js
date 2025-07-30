@@ -2,10 +2,8 @@
 "use strict";
 
 import {
-  bringForward,
   getFilteredFocusObjects,
   getOverlayImages,
-  sendBackwards,
 } from "../utils/utils.js";
 import { retForeImgUrl } from "../api/retForeImgUrl.js";
 import { retModelImgUrl } from "../api/retModelImgUrl.js";
@@ -239,10 +237,10 @@ function layerListPanel() {
           _self.canvas.fire("object:modified");
           _self.canvas.renderAll();
         } else if (button.classList.contains("move-up")) {
-          bringForward(object, _self.canvas);
+          _self.canvas.bringObjectForward(object);
           _self.canvas.fire("object:modified");
         } else if (button.classList.contains("move-down")) {
-          sendBackwards(object, _self.canvas);
+          _self.canvas.sendObjectBackwards(object);
           _self.canvas.fire("object:modified");
         } else if (button.classList.contains("open-setting")) {
           if (

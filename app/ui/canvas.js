@@ -2,7 +2,6 @@
 import { imgEditor } from "../index.ts";
 import { save, load } from "../utils/saveEdit.js";
 import {
-  bringToFront,
   canvasToJsonData,
   getControlPoint,
   getFilteredFocusObjects,
@@ -371,7 +370,7 @@ async function canvas() {
     });
 
     fabricCanvas.on("mouse:over", (e) => {
-      if (e.target?.isControlPoint) bringToFront(e.target, fabricCanvas);
+      if (e.target?.isControlPoint) fabricCanvas.bringObjectToFront(e.target);
     });
 
     fabricCanvas.on("object:added", (e) => {
