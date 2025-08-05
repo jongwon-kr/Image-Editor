@@ -668,38 +668,57 @@ function templates() {
     }
   }
 
-  function applyTemplate(template, canvas) {
+  async function applyTemplate(template, canvas) {
     const tmpltData = templateDataCache.get(template.filePath);
     if (!tmpltData) {
       console.error("유효하지 않은 템플릿 데이터입니다:", template);
+      alert("템플릿 데이터를 로드할 수 없습니다.");
       return;
     }
-    const jsonData = JSON.parse(tmpltData);
 
-    const newObjects = [];
-    fabric.util.enlivenObjects(
-      jsonData.objects,
-      (objects) => {
-        objects.forEach((obj) => {
-          canvas.add(obj);
-          newObjects.push(obj);
+    try {
+      const jsonData =
+        typeof tmpltData === "string" ? JSON.parse(tmpltData) : tmpltData;
+      if (!jsonData || !jsonData.objects || !Array.isArray(jsonData.objects)) {
+        throw new Error(
+          "유효하지 않은 JSON 데이터: objects 속성이 없거나 배열이 아닙니다."
+        );
+      }
+      const tempCanvas = new fabric.Canvas();
+      await tempCanvas.loadFromJSON(jsonData);
+      const newObjects = tempCanvas.getObjects();
+
+      newObjects.forEach((obj, index) => {
+        canvas.add(obj);
+        try {
+          if (obj.noFocusing) {
+            obj.selectable = false;
+            obj.evented = false;
+          }
           restoreControlPoints(canvas, obj);
+        } catch (err) {
+          console.error(`객체 ${index} 처리 실패:`, err);
+        }
+      });
+
+      if (newObjects.length > 0) {
+        const group = new fabric.Group(newObjects, {
+          name: `template_${template.tmpltNm}_${template.tmpltId}`,
         });
 
-        if (newObjects.length > 0) {
-          const group = new fabric.Group(newObjects, {
-            name: `template_${template.tmpltNm}_${template.tmpltId}`,
-          });
-          newObjects.forEach((obj) => canvas.remove(obj));
-          canvas.add(group);
-          canvas.setActiveObject(group);
-          canvas.fire("object:modified");
-        }
+        newObjects.forEach((obj) => canvas.remove(obj));
 
-        canvas.renderAll();
-      },
-      "fabric"
-    );
+        canvas.add(group);
+        canvas.setActiveObject(group);
+        canvas.fire("object:modified");
+      } else {
+        console.warn("그룹화할 객체가 없습니다.");
+      }
+      canvas.renderAll();
+    } catch (error) {
+      console.error("템플릿 적용 실패:", error);
+      alert("템플릿 적용에 실패했습니다: " + error.message);
+    }
   }
 
   async function generatePreviewFromTemplateData(
@@ -711,31 +730,77 @@ function templates() {
       callback(previewCache.get(filePath));
       return;
     }
+
     if (!tmpltData) {
+      console.warn("tmpltData is empty or undefined");
       callback("");
       return;
     }
+
+    let tempCanvas = null;
+    let canvasElement = null;
+
     try {
       const canvasData =
         typeof tmpltData === "string" ? JSON.parse(tmpltData) : tmpltData;
-      const tempCanvas = new fabric.Canvas(null, {
+
+      if (!canvasData || !canvasData.objects) {
+        throw new Error("Invalid canvasData: Missing objects property");
+      }
+
+      canvasElement = document.createElement("canvas");
+      canvasElement.id = `temp-canvas-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}`;
+      const container = document.createElement("div");
+      container.style.display = "none";
+      container.appendChild(canvasElement);
+      document.body.appendChild(container);
+
+      tempCanvas = new fabric.Canvas(canvasElement, {
         width: 1280,
         height: 720,
+        enableRetinaScaling: false,
       });
-      await tempCanvas.loadFromJSON(canvasData, async () => {
-        tempCanvas.setBackgroundColor = "transparent";
-        tempCanvas.renderAll.bind(tempCanvas);
-        const dataUrl = await tempCanvas.toDataURL({
-          format: "png",
-          multiplier: 0.2,
-        });
-        tempCanvas.dispose();
-        previewCache.set(filePath, dataUrl);
-        callback(dataUrl);
+
+      if (!tempCanvas.getContext()) {
+        throw new Error("Failed to initialize canvas context");
+      }
+
+      if (typeof tempCanvas.loadFromJSON !== "function") {
+        throw new Error(
+          "loadFromJSON method is not available on fabric.Canvas"
+        );
+      }
+
+      await tempCanvas.loadFromJSON(canvasData, (o, object) => {}, {
+        signal: undefined,
       });
+
+      tempCanvas.backgroundColor = "transparent";
+      tempCanvas.renderAll();
+
+      const dataUrl = tempCanvas.toDataURL({
+        format: "png",
+        multiplier: 0.2,
+        quality: 1,
+        enableRetinaScaling: false,
+      });
+
+      previewCache.set(filePath, dataUrl);
+      callback(dataUrl);
     } catch (error) {
-      console.error(`미리보기 생성 실패: filePath=${filePath}`, error);
+      console.error(`Failed to generate preview: filePath=${filePath}`, error);
       callback("");
+    } finally {
+      if (tempCanvas) {
+        tempCanvas.dispose();
+      }
+      if (canvasElement && canvasElement.parentNode) {
+        canvasElement.parentNode.parentNode?.removeChild(
+          canvasElement.parentNode
+        );
+      }
     }
   }
 

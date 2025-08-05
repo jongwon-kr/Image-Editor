@@ -65,7 +65,7 @@ const buttons = [
 ];
 
 // 초기 도형(그리기)
-const shapes: never[] = [];
+const shapes: string[] = [];
 
 // 초기 업로드 이미지
 const images: UserImage[] = [];
@@ -73,12 +73,16 @@ const images: UserImage[] = [];
 // 초기 템플릿
 const templates: Template[] = [];
 
+// 초기 편집데이터
+const edits: EditData[] = [];
+
 const options = {
   dimensions: dimensions,
   buttons: buttons,
   shapes: shapes,
   images: images,
   templates: templates,
+  edits: edits,
 };
 
 const imgEditor = new ImageEditor("#image-editor-container", options);

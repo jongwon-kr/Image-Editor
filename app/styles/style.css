@@ -117,7 +117,7 @@ body {
   border: 1px solid #ccc;
   margin: auto;
   max-height: 100%;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .toolpanel {
@@ -1515,7 +1515,7 @@ button:disabled {
   position: fixed;
   top: 0px;
   left: 0px;
-  width: 455px;
-  height: 452px;
+  width: 909px;
+  height: 905px;
   background: transparent;
 }

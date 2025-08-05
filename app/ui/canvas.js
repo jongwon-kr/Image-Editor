@@ -310,7 +310,7 @@ async function canvas() {
       }
     });
 
-    fabricCanvas.on("mouse:up", () => {
+    fabricCanvas.on("mouse:up", async () => {
       if (isDragging && fabricCanvas.isHandleMode) {
         isDragging = false;
         fabricCanvas.defaultCursor = "grab";
@@ -340,12 +340,9 @@ async function canvas() {
         fabricCanvas.originalH = rect.height;
         fabricCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
 
-        fabric.Image.fromURL(dataUrl, (img) => {
+        const img = await fabric.FabricImage.fromURL(dataUrl)
           img.set({ scaleX: 1, scaleY: 1, left: 0, top: 0 });
-          fabricCanvas.setBackgroundImage(
-            img,
-            fabricCanvas.renderAll.bind(fabricCanvas)
-          );
+          fabricCanvas.backgroundImage = img;
 
           fabricCanvas.getObjects().forEach((obj) => {
             fabricCanvas.remove(obj);
@@ -353,7 +350,6 @@ async function canvas() {
 
           fabricCanvas.fire("object:modified");
           fabricCanvas.renderAll();
-        });
 
         fabricCanvas.remove(cuttingRect);
         cuttingRect = null;
@@ -663,6 +659,9 @@ async function canvas() {
           obj.noFocusing = true;
         });
 
+      if (this.history.getValues().redo.length > 0) {
+        this.history.clearRedo();
+      }
       saveCanvasState(fabricCanvas, this.history);
       fabricCanvas.renderAll();
     });
@@ -718,28 +717,20 @@ async function canvas() {
             heightInput.value = Math.round(canvasHeight);
           }
 
-          fabricCanvas.loadFromJSON(parsedData, () => {
+          await fabricCanvas.loadFromJSON(parsedData,async  () => {
             if (parsedData.backgroundImage?.src) {
-              fabric.Image.fromURL(parsedData.backgroundImage.src, (img) => {
-                fabricCanvas.setBackgroundImage(
-                  img,
-                  fabricCanvas.renderAll.bind(fabricCanvas),
-                  {
+              const img = await fabric.FabricImage.fromURL(parsedData.backgroundImage.src);
+              img.set({
                     scaleX: scaleX,
                     scaleY: scaleY,
                     left: 0,
                     top: 0,
-                  }
-                );
-                fabricCanvas.fire("object:modified");
-                fabricCanvas.renderAll();
-              });
+              })
+              fabricCanvas.backgroundImage = img;
               imgEditor.applyZoom(zoomLevel);
-            } else {
-              fabricCanvas.fire("object:modified");
-              fabricCanvas.renderAll();
             }
           });
+          fabricCanvas.renderAll();
         } else {
           console.error("유효하지 않은 parsedData:", parsedData);
         }
@@ -749,7 +740,6 @@ async function canvas() {
     }
 
     setTimeout(() => {
-      saveCanvasState(fabricCanvas, this.history);
       fabricCanvas._objects.forEach((obj) => {
         if (obj.noFocusing) {
           obj.selectable = false;
@@ -758,6 +748,7 @@ async function canvas() {
         restoreControlPoints(fabricCanvas, obj);
       });
       processWeatherFronts(fabricCanvas.getObjects(), fabricCanvas);
+      saveCanvasState(fabricCanvas, this.history);
     }, 100);
 
     document.querySelector("#canvas-holder").addEventListener("click", (e) => {
@@ -965,14 +956,9 @@ async function canvas() {
     canvasJSON.width = fabricCanvas.getWidth();
     canvasJSON.height = fabricCanvas.getHeight();
 
-    if (history.getValues().redo.length > 0) {
-      history.push(
-        history.getValues().redo[history.getValues().redo.length - 1]
-      );
-      history.clearRedo();
-    }
     const serializedData = JSON.stringify(canvasJSON);
     history.push(serializedData);
+    console.log(history.getValues());
   }
 
   function handleKeydownEvents(e, fabricCanvas, context) {
@@ -1054,6 +1040,7 @@ async function canvas() {
         fabricCanvas.discardActiveObject();
         activeObjects.forEach((obj) => fabricCanvas.remove(obj));
         fabricCanvas.renderAll();
+        fabricCanvas.fire("object:modified");
       }
     }
 

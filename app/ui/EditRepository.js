@@ -416,32 +416,19 @@ async function applyData(data) {
         throw new Error("편집 데이터를 가져올 수 없습니다.");
       }
       const parsedData = JSON.parse(editData);
-
+      console.log(parsedData);
       imgEditor.canvas.clear();
-
+      
       const viewportTransform = parsedData.viewportTransform || [
         1, 0, 0, 1, 0, 0,
       ];
       const zoomLevel = viewportTransform[0] || 1;
 
-      const canvasWidth =
-        parsedData.width / zoomLevel ||
-        parsedData.backgroundImage?.width *
-          parsedData.backgroundImage?.scaleX ||
-        1280;
-      const canvasHeight =
-        parsedData.height / zoomLevel ||
-        parsedData.backgroundImage?.height *
-          parsedData.backgroundImage?.scaleY ||
-        720;
-      const scaleX = parsedData.backgroundImage?.scaleX || 1;
-      const scaleY = parsedData.backgroundImage?.scaleY || 1;
+      const canvasWidth = parsedData.width;
+      const canvasHeight = parsedData.height;
 
-      imgEditor.canvas.setWidth(canvasWidth);
-      imgEditor.canvas.setHeight(canvasHeight);
-      imgEditor.canvas.originalW = canvasWidth;
-      imgEditor.canvas.originalH = canvasHeight;
-
+      imgEditor.canvas.originalW = canvasWidth / zoomLevel;
+      imgEditor.canvas.originalH = canvasHeight / zoomLevel;
       imgEditor.canvas.setViewportTransform(viewportTransform);
       imgEditor.applyZoom(zoomLevel);
 
@@ -456,37 +443,20 @@ async function applyData(data) {
         heightInput.value = Math.round(canvasHeight);
       }
 
-      await imgEditor.canvas.loadFromJSON(parsedData, async () => {
-        imgEditor.canvas.getObjects().forEach((obj) => {
-          if (obj.noFocusing) {
-            obj.selectable = false;
-            obj.evented = false;
-          }
-          restoreControlPoints(imgEditor.canvas, obj);
-        });
-
-        if (parsedData.backgroundImage) {
-          await fabric.Image.fromURL(parsedData.backgroundImage.src, (img) => {
-            imgEditor.canvas.setBackgroundImage(
-              img,
-              imgEditor.canvas.renderAll.bind(imgEditor.canvas),
-              {
-                scaleX: scaleX,
-                scaleY: scaleY,
-                left: 0,
-                top: 0,
-              }
-            );
-            imgEditor.canvas.fire("object:modified");
-            imgEditor.canvas.renderAll();
-          });
-        } else {
-          imgEditor.canvas.fire("object:modified");
-          imgEditor.canvas.renderAll();
+      await imgEditor.canvas.loadFromJSON(parsedData);
+      imgEditor.canvas.getObjects().forEach((obj) => {
+        if (obj.noFocusing) {
+          obj.selectable = false;
+          obj.evented = false;
         }
+        restoreControlPoints(imgEditor.canvas, obj);
       });
 
       alert(`"${data.wkNm}" 데이터가 적용되었습니다.`);
+      imgEditor.history.clear();
+      
+      imgEditor.canvas.fire("object:modified");
+      imgEditor.canvas.renderAll();
     } catch (error) {
       console.error("데이터 적용 실패:", error);
       alert("데이터를 적용하는 데 실패했습니다.");
@@ -629,20 +599,17 @@ async function previewEditData(filePath, editData, callback) {
       height: canvasHeight,
     });
 
-    await tempCanvas.loadFromJSON(parsedData, () => {
-      tempCanvas.setViewportTransform(viewportTransform);
-      tempCanvas.setBackgroundColor(
-        "transparent",
-        tempCanvas.renderAll.bind(tempCanvas)
-      );
-      const dataUrl = tempCanvas.toDataURL({
-        format: "png",
-        multiplier: 0.5,
-      });
-      tempCanvas.dispose();
-      previewCache.set(filePath, dataUrl);
-      callback(dataUrl);
+    await tempCanvas.loadFromJSON(parsedData);
+    tempCanvas.setViewportTransform(viewportTransform);
+    tempCanvas.backgroundColor = "transparent";
+    const dataUrl = tempCanvas.toDataURL({
+      format: "png",
+      multiplier: 2,
     });
+    tempCanvas.dispose();
+    previewCache.set(filePath, dataUrl);
+    callback(dataUrl);
+    tempCanvas.renderAll();
   } catch (error) {
     console.error(`미리보기 생성 실패: filePath=${filePath}`, error);
     callback("");

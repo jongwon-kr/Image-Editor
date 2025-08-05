@@ -488,9 +488,6 @@ function canvasSettings() {
         initSelectedMapArea();
       }
       _self.applyZoom(1);
-
-      //_self.canvas.setWidth(1280);
-      //_self.canvas.setHeight(705);
       updateInputFields();
 
       const response = await getBackMapImg();
@@ -516,7 +513,6 @@ function canvasSettings() {
           });
           imageBase64 = combinedImage;
         };
-        //reader.readAsDataURL(data);
       }
     });
 
@@ -540,9 +536,14 @@ function canvasSettings() {
   };
 
   async function URLToImage(imageBase64) {
-    if (!imageBase64) return;
+    if (!imageBase64) {
+      console.error("Error: imageBase64 is empty or undefined");
+      return;
+    }
 
-    await fabric.Image.fromURL(imageBase64, function (img) {
+    try {
+      const img = await fabric.FabricImage.fromURL(imageBase64);
+
       const imgWidth = img.width;
       const imgHeight = img.height;
 
@@ -550,47 +551,30 @@ function canvasSettings() {
 
       const isThematicMapImage = imageBase64.includes("data:image/png");
       if (isThematicMapImage) {
-        // if (imgWidth >= 1280) {
-        //   canvasWidth = 1280;
-        //   scaleX = canvasWidth / imgWidth;
-        //   scaleY = scaleX;
-        //   canvasHeight = Math.round(imgHeight * scaleY);
-        // } else {
         canvasWidth = imgWidth;
         canvasHeight = imgHeight;
         scaleX = 1;
         scaleY = 1;
-        // }
       } else {
         canvasWidth =
           parseInt(
             document.querySelector(
               `${_self.containerSelector} .toolpanel#background-panel .content #input-width`
-            ).value,
+            )?.value,
             10
           ) || imgWidth;
         canvasHeight =
           parseInt(
             document.querySelector(
               `${_self.containerSelector} .toolpanel#background-panel .content #input-height`
-            ).value,
+            )?.value,
             10
           ) || imgHeight;
 
-        // if (imgWidth > 1280 || imgHeight > 720) {
-        //   scaleX = canvasWidth / imgWidth;
-        //   scaleY = canvasHeight / imgHeight;
-        //   const scale = Math.min(scaleX, scaleY);
-        //   canvasWidth = imgWidth * scale;
-        //   canvasHeight = imgHeight * scale;
-        //   scaleX = scale;
-        //   scaleY = scale;
-        // } else {
         canvasWidth = imgWidth;
         canvasHeight = imgHeight;
         scaleX = 1;
         scaleY = 1;
-        // }
       }
 
       _self.canvas.setWidth(canvasWidth);
@@ -604,24 +588,25 @@ function canvasSettings() {
       const heightInput = document.querySelector(
         `${_self.containerSelector} .toolpanel#background-panel .content #input-height`
       );
+
+      if (!widthInput || !heightInput) {
+        console.error("Error: Width or height input elements not found");
+        return;
+      }
+
       widthInput.value = Math.round(canvasWidth);
       heightInput.value = Math.round(canvasHeight);
 
       const objects = getFilteredNoFocusObjects();
 
       _self.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-
-      _self.canvas.setBackgroundImage(
-        img,
-        _self.canvas.renderAll.bind(_self.canvas),
-        {
-          scaleX: scaleX,
-          scaleY: scaleY,
-          left: 0,
-          top: 0,
-        }
-      );
-
+      img.set({
+        scaleX: scaleX,
+        scaleY: scaleY,
+        left: 0,
+        top: 0,
+      });
+      _self.canvas.backgroundImage = img;
       const prevWidth = _self.canvas.getWidth();
       const prevHeight = _self.canvas.getHeight();
       const widthRatio = canvasWidth / prevWidth;
@@ -642,7 +627,9 @@ function canvasSettings() {
       });
 
       _self.canvas.renderAll();
-    });
+    } catch (error) {
+      console.error("Error loading or setting background image:", error);
+    }
   }
 
   async function addKoreaLine(ctx, canvasWidth, canvasHeight, selectedMapArea) {

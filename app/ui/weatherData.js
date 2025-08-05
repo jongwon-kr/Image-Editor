@@ -336,29 +336,28 @@ function addImageToCanvas(data, label, _self) {
     const addDataURL = e.target.result;
     const tempZoom = _self.canvas.getZoom();
     _self.fitZoom();
-    await fabric.Image.fromURL(addDataURL, function (img) {
-      img.set({
-        label: label,
-        left: 0,
-        top: 0,
-        scaleX: _self.canvas.width / img.width,
-        scaleY: _self.canvas.height / img.height,
-        selectable: false,
-        evented: false,
-        noFocusing: true,
-        overlayImage: true,
-        lockMovementX: true,
-        lockMovementY: true,
-        lockScalingX: true,
-        lockScalingY: true,
-        hasControls: false,
-        params: data.params,
-        apiType: data.apiType,
-      });
-      _self.canvas.add(img);
-      _self.applyZoom(tempZoom);
-      _self.canvas.renderAll();
+    const img = await fabric.FabricImage.fromURL(addDataURL);
+    img.set({
+      label: label,
+      left: 0,
+      top: 0,
+      scaleX: _self.canvas.width / img.width,
+      scaleY: _self.canvas.height / img.height,
+      selectable: false,
+      evented: false,
+      noFocusing: true,
+      overlayImage: true,
+      lockMovementX: true,
+      lockMovementY: true,
+      lockScalingX: true,
+      lockScalingY: true,
+      hasControls: false,
+      params: data.params,
+      apiType: data.apiType,
     });
+    _self.canvas.add(img);
+    _self.applyZoom(tempZoom);
+    _self.canvas.renderAll();
   };
   reader.readAsDataURL(data.image);
 }

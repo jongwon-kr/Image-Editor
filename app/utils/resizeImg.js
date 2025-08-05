@@ -4,43 +4,58 @@
  */
 
 function resizeImg(imageUrl, maxWidth, callback) {
+  if (!imageUrl || typeof imageUrl !== "string") {
+    console.error("Invalid imageUrl:", imageUrl);
+    callback(null, new Error("Invalid or empty imageUrl"));
+    return;
+  }
+
   const img = new Image();
   img.src = imageUrl;
 
   img.onload = function () {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
 
-    let originalWidth = img.width;
-    let originalHeight = img.height;
+      if (!ctx) {
+        throw new Error("Failed to get 2D context");
+      }
 
-    let newWidth = originalWidth;
-    let newHeight = originalHeight;
+      let originalWidth = img.width;
+      let originalHeight = img.height;
 
-    if (originalWidth > maxWidth) {
-      const widthRatio = maxWidth / originalWidth;
-      const scale = Math.min(widthRatio);
+      let newWidth = originalWidth;
+      let newHeight = originalHeight;
 
-      newWidth = originalWidth * scale;
-      newHeight = originalHeight * scale;
-    }
+      if (originalWidth > maxWidth) {
+        const widthRatio = maxWidth / originalWidth;
+        const scale = Math.min(widthRatio);
 
-    canvas.width = newWidth;
-    canvas.height = newHeight;
+        newWidth = originalWidth * scale;
+        newHeight = originalHeight * scale;
+      }
 
-    ctx.drawImage(img, 0, 0, newWidth, newHeight);
+      canvas.width = newWidth;
+      canvas.height = newHeight;
 
-    const resizedImageUrl = canvas.toDataURL("image/png");
+      ctx.drawImage(img, 0, 0, newWidth, newHeight);
 
-    if (typeof callback === "function") {
-      callback(resizedImageUrl);
-    } else {
-      console.error("Callback is not a function");
+      const resizedImageUrl = canvas.toDataURL("image/png");
+
+      if (typeof callback === "function") {
+        callback(resizedImageUrl);
+      } else {
+        console.error("Callback is not a function");
+      }
+    } catch (error) {
+      console.error("Error resizing image:", error);
+      callback(null, error);
     }
   };
 
   img.onerror = function (error) {
-    console.error("Image load failed:", error);
+    console.error("Image load failed for URL:", imageUrl, error);
     if (typeof callback === "function") {
       callback(null, error);
     }

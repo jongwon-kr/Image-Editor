@@ -53,17 +53,10 @@ function zoom() {
   imgEditor.applyZoom = (zoom) => {
     currentZoomLevel = Math.max(minZoom, Math.min(maxZoom, zoom));
     _self.canvas.setZoom(currentZoomLevel);
-    if (!_self.canvas.backgroundImage) {
-      _self.canvas.setWidth(_self.canvas.originalW * currentZoomLevel);
-      _self.canvas.setHeight(_self.canvas.originalH * currentZoomLevel);
-    } else {
-      _self.canvas.setWidth(
-        _self.canvas.backgroundImage.width * currentZoomLevel
-      );
-      _self.canvas.setHeight(
-        _self.canvas.backgroundImage.height * currentZoomLevel
-      );
-    }
+
+    _self.canvas.setWidth(_self.canvas.originalW * currentZoomLevel);
+    _self.canvas.setHeight(_self.canvas.originalH * currentZoomLevel);
+
     _self.inputZoomLevel(currentZoomLevel);
     updateScaleControlPoints(_self.canvas);
     _self.canvas.renderAll();

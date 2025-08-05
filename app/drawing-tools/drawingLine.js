@@ -229,9 +229,7 @@ function attachControlPointEvents(fabricCanvas, line, p0, p2, p1) {
       fabricCanvas.getActiveObjects().filter((obj) => !obj.isControlPoint)
         .length > 1
     ) {
-      Object.values(controlPoints).forEach((point) => {
-        point.set({ visible: false });
-      });
+      return;
     } else {
       if (line.scaleX !== 1 || line.scaleY !== 1) {
         let pathMinX = Infinity,

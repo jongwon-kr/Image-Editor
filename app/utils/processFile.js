@@ -54,24 +54,23 @@ function processFiles(files) {
         reader.readAsText(file);
       } else {
         reader.onload = async (f) => {
-          await fabric.Image.fromURL(f.target.result, (img) => {
-            pushToFileList(file, f.target.result);
+          const img = await fabric.FabricImage.fromURL(f.target.result);
+          pushToFileList(file, f.target.result);
 
-            if (file.name) {
-              img.set({ label: file.name.split(".")[0] });
-            }
+          if (file.name) {
+            img.set({ label: file.name.split(".")[0] });
+          }
 
-            img.scaleToHeight(300);
-            img.scaleToWidth(300);
-            img.set({ left: centerX, top: centerY }).setCoords();
+          img.scaleToHeight(300);
+          img.scaleToWidth(300);
+          img.set({ left: centerX, top: centerY }).setCoords();
 
-            canvas.add(img);
-            canvas.fire("object:modified");
-            canvas.renderAll();
+          canvas.add(img);
+          canvas.fire("object:modified");
+          canvas.renderAll();
 
-            pending--;
-            if (pending === 0) resolve(fileList);
-          });
+          pending--;
+          if (pending === 0) resolve(fileList);
         };
         reader.readAsDataURL(file);
       }

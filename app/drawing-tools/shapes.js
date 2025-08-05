@@ -159,10 +159,7 @@ function shapes() {
 
         button.addEventListener("click", async function () {
           try {
-            // v6.7.0: Use Promise-based Image.fromURL
-            const imgObj = await fabric.Image.fromURL(item.src, {
-              crossOrigin: "anonymous", // Add if images are from a different domain
-            });
+            const imgObj = await fabric.FabricImage.fromURL(item.src);
             imgObj.scaleToWidth(100);
             imgObj.scaleToHeight(100);
 

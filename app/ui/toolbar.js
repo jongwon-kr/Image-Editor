@@ -207,6 +207,7 @@ function toolbar() {
             canvasJsonData.objects = canvasJsonData.objects.filter(
               (obj) => !obj.isControlPoint
             );
+            canvasJsonData.viewportTransform = _self.canvas.viewportTransform;
             await upload(canvasJsonData);
           }
         } else if (id === "clear") {

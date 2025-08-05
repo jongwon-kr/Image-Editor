@@ -1445,7 +1445,7 @@ function selectionSettings() {
               callback(clonedGroup);
             });
           } else if (obj.type === "image") {
-            fabric.Image.fromObject(serializedObj, (clone) => {
+            fabric.FabricImage.fromObject(serializedObj, (clone) => {
               if (!clone) {
                 console.error("Failed to clone image:", obj);
                 return callback();

@@ -2,6 +2,7 @@
 import { imgEditor } from "../index.ts";
 import { updateScaleControlPoints } from "../utils/utils.js";
 import { updateControlPointsAndPath } from "./drawingArrow.js";
+import { WeatherFrontLine } from "./weatherFrontLine copy.js";
 
 let isControl = false;
 let isScale = false;
@@ -104,7 +105,7 @@ function generateWeatherFrontPath(front, fabricCanvas) {
     front.shapeObjects.forEach((obj) => fabricCanvas.remove(obj));
   }
   front.shapeObjects = [];
-  
+
   const defaultSpacing = 24;
   const defaultShapeSize = 8;
 
@@ -1160,176 +1161,9 @@ function updateWeatherFrontDimensions(front) {
 }
 
 function drawingWeatherFront(fabricCanvas, frontType = "warm") {
-  let isDrawingFront = false,
-    frontToDraw,
-    pointer,
-    updatedFront,
-    isMouseDown = false;
-
-  fabricCanvas.on("mouse:down", (o) => {
-    if (!fabricCanvas.isDrawingWeatherFrontMode) return;
-
-    isMouseDown = true;
-    isDrawingFront = true;
-    pointer = fabricCanvas.getPointer(o.e);
-
-    if (!frontToDraw) {
-      frontToDraw = new fabric.Path(
-        `M${pointer.x} ${pointer.y} L${pointer.x} ${pointer.y}`,
-        {
-          strokeWidth: 2,
-          stroke:
-            frontType === "warm"
-              ? "red"
-              : frontType === "cold"
-              ? "blue"
-              : frontType === "stationary"
-              ? "black"
-              : "purple",
-          fill: false,
-          frontType: frontType,
-          pathType: "weatherFront",
-          padding: 6,
-        }
-      );
-      frontToDraw.selectable = false;
-      frontToDraw.evented = false;
-      frontToDraw.strokeUniform = true;
-      frontToDraw.isReflect = false;
-      fabricCanvas.add(frontToDraw);
-      generateWeatherFrontPath(frontToDraw, fabricCanvas);
-      fabricCanvas.renderAll();
-      return;
-    }
-
-    if (frontToDraw) {
-      frontToDraw.path.push(["L", pointer.x, pointer.y]);
-      updateWeatherFrontDimensions(frontToDraw);
-      generateWeatherFrontPath(frontToDraw, fabricCanvas);
-      attachControlPoints(fabricCanvas, frontToDraw);
-      fabricCanvas.renderAll();
-    }
-  });
-
-  fabricCanvas.on("mouse:move", (o) => {
-    if (!fabricCanvas.isDrawingWeatherFrontMode || !isDrawingFront) return;
-
-    pointer = fabricCanvas.getPointer(o.e);
-    updatedFront = ["L", pointer.x, pointer.y];
-
-    if (o.e.shiftKey) {
-      let lastPoint = [...frontToDraw.path].pop();
-      let startX = lastPoint[1];
-      let startY = lastPoint[2];
-      let x2 = pointer.x - startX;
-      let y2 = pointer.y - startY;
-      let r = Math.sqrt(x2 * x2 + y2 * y2);
-      let angle = Math.atan2(y2, x2);
-
-      angle = parseInt(((angle * 180) / Math.PI + 7.5) / 15) * 15;
-      let cosx = r * Math.cos((angle * Math.PI) / 180);
-      let sinx = r * Math.sin((angle * Math.PI) / 180);
-      updatedFront[1] = cosx + startX;
-      updatedFront[2] = sinx + startY;
-    }
-
-    if (frontToDraw.path.length > 1) {
-      let snapPoints = [...frontToDraw.path];
-      snapPoints.pop();
-      for (let p of snapPoints) {
-        if (
-          (p[0] === "L" || p[0] === "M") &&
-          inRange(10, pointer.x, pointer.y, p[1], p[2])
-        ) {
-          updatedFront[1] = p[1];
-          updatedFront[2] = p[2];
-          break;
-        }
-      }
-    }
-
-    frontToDraw.path.pop();
-    frontToDraw.path.push(updatedFront);
-    updateWeatherFrontDimensions(frontToDraw);
-    generateWeatherFrontPath(frontToDraw, fabricCanvas);
-    fabricCanvas.renderAll();
-  });
-
-  fabricCanvas.on("mouse:up", (o) => {
-    if (!fabricCanvas.isDrawingWeatherFrontMode) {
-      isMouseDown = false;
-      return;
-    }
-
-    isMouseDown = false;
-    updateWeatherFrontDimensions(frontToDraw);
-    generateWeatherFrontPath(frontToDraw, frontToDraw.canvas);
-    attachControlPoints(fabricCanvas, frontToDraw);
-    fabricCanvas.renderAll();
-  });
-
-  const cancelDrawing = () => {
-    if (frontToDraw.path.length > 1) {
-      frontToDraw.path.pop();
-      updateWeatherFrontDimensions(frontToDraw);
-      generateWeatherFrontPath(frontToDraw, fabricCanvas);
-      attachControlPoints(fabricCanvas, frontToDraw);
-
-      if (!frontToDraw._hasSelectionHandler) {
-        frontToDraw._hasSelectionHandler = true;
-
-        frontToDraw.set({
-          selectable: true,
-          evented: true,
-        });
-      }
-      fabricCanvas.setActiveObject(frontToDraw);
-      imgEditor.setActiveTool("select");
-      fabricCanvas.fire("object:modified");
-      fabricCanvas.renderAll();
-      frontToDraw = null;
-      isDrawingFront = false;
-    } else {
-      fabricCanvas.remove(frontToDraw);
-      frontToDraw = null;
-      isDrawingFront = false;
-      fabricCanvas.renderAll();
-    }
-  };
-
-  document.addEventListener("keydown", (e) => {
-    if (!isDrawingFront) return;
-    const key = e.which || e.keyCode;
-    if (key === 27) cancelDrawing();
-  });
-
-  document.addEventListener("mousedown", (e) => {
-    if (!isDrawingFront) return;
-    if (!document.querySelector(".canvas-container").contains(e.target)) {
-      cancelDrawing();
-    }
-  });
-
-  fabric.Path.prototype.toJSON = (function (originalFn) {
-    return function (propertiesToInclude) {
-      const json = originalFn.call(this, propertiesToInclude);
-      if (this.controlPoints) {
-        json.controlPoints = this.controlPoints.map((point) => ({
-          left: point.left,
-          top: point.top,
-          segmentIndex: point.segmentIndex,
-          isStart: point.isStart || false,
-          isMidPoint: point.isMidPoint || false,
-          offsetX: point.offsetX,
-          offsetY: point.offsetY,
-        }));
-      }
-      if (this.frontType) {
-        json.frontType = this.frontType;
-      }
-      return json;
-    };
-  })(fabric.Path.prototype.toJSON);
+  fabricCanvas.isDrawingWeatherFrontMode = true;
+  const front = new WeatherFrontLine(`M0 0 L0 0`, { frontType });
+  front.initializeDrawing(fabricCanvas);
 }
 
 function removeAllFrontShapes(fabricCanvas) {
@@ -1339,7 +1173,6 @@ function removeAllFrontShapes(fabricCanvas) {
   fronts.forEach((front) => {
     if (front.shapeObjects) {
       front.shapeObjects.forEach((obj) => {
-        obj.off();
         fabricCanvas.remove(obj);
       });
       front.shapeObjects = [];

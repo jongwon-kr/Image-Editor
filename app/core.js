@@ -4,7 +4,7 @@ import { lineDrawing } from "./drawing-tools/drawingLine.js";
 import { arrowDrawing } from "./drawing-tools/drawingArrow.js";
 import { pathDrawing } from "./drawing-tools/drawingPath.js";
 import { textBoxDrawing } from "./drawing-tools/drawingText.js";
-import { weatherFrontLine } from "./drawing-tools/weatherFrontLine.js";
+import { WeatherFrontLine } from "./drawing-tools/weatherFrontLine copy.js";
 import {
   generateWeatherFrontPath,
   removeAllFrontShapes,
@@ -63,15 +63,69 @@ class ImageEditor {
   }
 
   getCanvasJSON = () => {
-    return this.canvas.toJSON();
+    const canvasJSON = this.canvas.toJSON([
+      "id",
+      "noFocusing",
+      "controlPoints",
+      "shapeObjects",
+      "pathType",
+      "frontType",
+      "startHead",
+      "endHead",
+      "path",
+      "pathD",
+      "p0",
+      "p1",
+      "p2",
+      "label",
+      "desc",
+      "apiType",
+      "params",
+      "name",
+      "visible",
+      "overlayImage",
+      "isReflect",
+      "isDelete",
+      "isScaledInGroup",
+      "lastTransformMatrix",
+    ]);
+    canvasJSON.viewportTransform = this.canvas.viewportTransform;
+    canvasJSON.width = this.canvas.getWidth();
+    canvasJSON.height = this.canvas.getHeight();
+    return JSON.stringify(canvasJSON);
   };
 
   setCanvasJSON = async (current) => {
-    current &&
-      (await this.canvas.loadFromJSON(
-        JSON.parse(current),
-        this.canvas.renderAll.bind(this.canvas)
-      ));
+    if (!current) return;
+    try {
+      const parsedJSON = JSON.parse(current);
+      await this.canvas.loadFromJSON(parsedJSON, async () => {
+        if (parsedJSON.backgroundImage?.src) {
+          const img = await fabric.FabricImage.fromURL(
+            parsedJSON.backgroundImage.src
+          );
+          img.set({
+            scaleX: parsedJSON.backgroundImage.scaleX || 1,
+            scaleY: parsedJSON.backgroundImage.scaleY || 1,
+            left: parsedJSON.backgroundImage.left || 0,
+            top: parsedJSON.backgroundImage.top || 0,
+          });
+          this.canvas.backgroundImage = img;
+        }
+      });
+      this.canvas._objects.forEach((obj) => {
+        if (obj.noFocusing) {
+          obj.selectable = false;
+          obj.evented = false;
+        }
+        restoreControlPoints(this.canvas, obj);
+      });
+      processWeatherFronts(this.canvas.getObjects(), this.canvas);
+      this.canvas.renderAll();
+    } catch (error) {
+      console.error("Failed to load canvas JSON:", error);
+      throw error;
+    }
   };
 
   setActiveTool = (id) => {
@@ -307,11 +361,10 @@ class ImageEditor {
         return;
       }
 
-      removeAllFrontShapes(this.canvas);
       this.history.undo();
-
-      const parsedJSON = JSON.parse(current);
-      await this.updateCanvasFromJSON(parsedJSON);
+      removeAllFrontShapes(this.canvas);
+      await this.setCanvasJSON(current);
+      console.log(this.history.getValues());
     } catch (error) {
       console.error("undo failed:", error);
     } finally {
@@ -335,11 +388,10 @@ class ImageEditor {
         return;
       }
 
-      removeAllFrontShapes(this.canvas);
       this.history.redo();
-
-      const parsedJSON = JSON.parse(current);
-      await this.updateCanvasFromJSON(parsedJSON);
+      removeAllFrontShapes(this.canvas);
+      await this.setCanvasJSON(current);
+      console.log(this.history.getValues());
     } catch (error) {
       console.error("redo failed:", error);
     } finally {
@@ -470,6 +522,7 @@ class ImageEditor {
         document.querySelectorAll("textarea:focus, input:focus").length === 0 &&
         !this.isProcessing
       ) {
+        e.preventDefault(); // 브라우저 기본 동작 방지
         if (key === 90 && this.history.getValues().undo.length > 0) {
           this.undo();
         } else if (key === 89 && this.history.getValues().redo.length > 0) {
@@ -647,8 +700,8 @@ class ImageEditor {
     this.initializeToolbar();
     this.initializeMainPanel();
     this.initializeShapes();
-    this.initializeCanvasSettings();
     this.canvas = await this.initializeCanvas();
+    this.initializeCanvasSettings();
 
     this.initializeSelectionSettings();
     this.initializeCopyPaste();

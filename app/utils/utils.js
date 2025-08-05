@@ -608,6 +608,9 @@ fabric.Object.prototype.toObject = (function (toObject) {
       "frontShape",
       "isReflect",
       "isDelete",
+      "viewportTransform",
+      "width",
+      "height",
       "isScaledInGroup",
       "lastTransformMatrix",
     ]);
