@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { ICONS } from "../models/featIcons.ts";
 import { getDeleteArea } from "../utils/utils.js";
 
 function freeDrawSettings() {
@@ -16,7 +16,6 @@ function freeDrawSettings() {
     return;
   }
 
-  // 툴 패널 UI 추가 (한 번만 실행)
   mainPanel.insertAdjacentHTML(
     "beforeend",
     `<div class="toolpanel" id="draw-panel"><div class="content"><p class="title">자유 그리기</p></div></div>`
@@ -70,7 +69,6 @@ function freeDrawSettings() {
     _self.canvas.fire("object:modified");
   });
 
-  // 브러시 업데이트 함수
   const updateBrush = () => {
     try {
       _self.canvas.isDrawingMode = true;
@@ -100,7 +98,6 @@ function freeDrawSettings() {
     }
   };
 
-  // 마우스 이벤트 핸들러 정의
   const handleMouseMove = (e) => {
     const pointer = _self.canvas.getPointer(e.e);
     if (cursorCircle) {
@@ -116,7 +113,7 @@ function freeDrawSettings() {
       selectable: false,
       evented: false,
       excludeFromExport: true,
-      isControlPoint: true,
+      noFocusing: true,
     });
     _self.canvas.add(cursorCircle);
     _self.canvas.renderAll();
@@ -130,14 +127,11 @@ function freeDrawSettings() {
     }
   };
 
-  // draw 모드 활성화 함수
   _self.activateDrawMode = () => {
-    // 기존 이벤트 리스너 제거
     if (_self.cleanupDrawMode) {
       _self.cleanupDrawMode();
     }
 
-    // 이벤트 리스너 등록
     _self.canvas.on("mouse:move", handleMouseMove);
     _self.canvas.on("mouse:out", handleMouseOut);
     _self.canvas.on("path:created", (e) => {
@@ -153,7 +147,6 @@ function freeDrawSettings() {
     updateBrush();
   };
 
-  // 정리 함수: 마우스 원형과 이벤트 리스너 제거
   _self.cleanupDrawMode = () => {
     if (cursorCircle) {
       _self.canvas.remove(cursorCircle);
@@ -165,7 +158,6 @@ function freeDrawSettings() {
     _self.canvas.off("path:created");
   };
 
-  // 입력 이벤트 처리
   const inputBrushWidth = document.querySelector(
     `${this.containerSelector} .toolpanel#draw-panel .content #input-brush-width`
   );
@@ -205,26 +197,55 @@ function freeDrawSettings() {
     updateBrush();
   });
 
+  function initializeColorPickerWithEyedropper(pickerElement, onColorChange) {
+    const spectrumOptions = {
+      type: "color",
+      showInput: true,
+      showButtons: false,
+      allowEmpty: false,
+      move: onColorChange,
+    };
+
+    pickerElement.spectrum(spectrumOptions).on("change.spectrum", (e, c) => {
+      onColorChange(c);
+    });
+
+    if (window.EyeDropper) {
+      const eyedropperBtn = document.createElement("button");
+      eyedropperBtn.className = "eyedropper-btn";
+      eyedropperBtn.innerHTML = ICONS.eyeDrop;
+      pickerElement.parent().append(eyedropperBtn);
+
+      eyedropperBtn.addEventListener("click", async () => {
+        try {
+          const eyeDropper = new EyeDropper();
+          const result = await eyeDropper.open();
+          const newColor = tinycolor(result.sRGBHex);
+          pickerElement.spectrum("set", newColor);
+          onColorChange(newColor);
+        } catch (e) {
+          console.log("Color selection cancelled.");
+        }
+      });
+    }
+  }
+
   const colorPicker = $(
     `${this.containerSelector} .toolpanel#draw-panel .content #color-picker`
   );
-  colorPicker
-    .spectrum({
-      type: "color",
-      showInput: "true",
-      showInitial: "true",
-      allowEmpty: "false",
-    })
-    .change(function () {
-      try {
-        color = $(this).val();
-        if (drawingMode === "add") {
-          updateBrush();
-        }
-      } catch (error) {
-        console.error("Failed to update brush color:", error);
+
+  const handleColorChange = (newColor) => {
+    try {
+      color = newColor.toRgbString();
+      if (drawingMode === "add") {
+        updateBrush();
       }
-    });
+    } catch (error) {
+      console.error("Failed to update brush color:", error);
+    }
+  };
+
+  initializeColorPickerWithEyedropper(colorPicker, handleColorChange);
 
   const eraseCheckbox = document.querySelector(
     `${this.containerSelector} .toolpanel#draw-panel .content #erase`

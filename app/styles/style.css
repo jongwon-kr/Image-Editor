@@ -295,11 +295,11 @@ body {
 }
 
 .toolpanel .input-container label {
-  width: 50%;
+  min-width: 50%;
 }
 
 .toolpanel .input-container select {
-  width: 50%;
+  min-width: 50%;
   height: 29px;
   border: 1px solid #ccc;
   border-radius: 5px;
@@ -315,6 +315,7 @@ body {
   display: flex;
   align-items: center;
   padding: 1px;
+  max-width: 50%;
   height: 30px;
   background-color: #e4e4e4;
   border-radius: 6px;
@@ -1001,6 +1002,7 @@ input#input-zoom-level {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
+  justify-content: space-between;
 }
 
 .horizontal-line {
@@ -1158,7 +1160,7 @@ input#input-zoom-level {
   padding: 10px 18px;
   border: none;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   text-align: center;
   align-items: center;
@@ -1485,6 +1487,7 @@ button:disabled {
   left: 0;
   right: 0;
   bottom: 0;
+  width: 40px;
   background-color: #8a8f98;
   border-radius: 24px;
   cursor: pointer;
@@ -1518,4 +1521,123 @@ button:disabled {
   width: 909px;
   height: 905px;
   background: transparent;
+}
+
+/* Context Menu CSS */
+:root {
+  --menu-bg: #ffffff;
+  --menu-shadow: #00000050;
+  --menu-border: #eeeeee;
+  --menu-radius: 8px;
+
+  --item-hover-bg: #d4d4d4;
+  --item-text-color: #333333;
+  --item-shortcut-color: #999999;
+  --item-indicator-color: #999999;
+
+  --divider-color: #c0c0c0;
+}
+
+.context-menu {
+  position: absolute;
+  background-color: var(--menu-bg);
+  box-shadow: 0 5px 15px var(--menu-shadow);
+  z-index: 1000;
+  padding: 6px 4px;
+  min-width: 220px;
+  border: 1px solid var(--menu-border);
+  border-radius: var(--menu-radius);
+  list-style: none;
+  margin: 0;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  padding: 0px 8px;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+  font-size: 14px;
+  color: var(--item-text-color);
+  border-radius: 4px;
+  transition: background-color 0.1s ease-in-out;
+}
+
+.context-menu-item:hover {
+  background-color: var(--item-hover-bg);
+}
+
+.context-menu-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.context-menu-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.context-menu-icon-spacer {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.context-menu-label {
+  white-space: nowrap;
+}
+
+.context-menu-shortcut {
+  color: var(--item-shortcut-color);
+  font-size: 12px;
+  color: white;
+  background-color: #555ccc;
+  border-radius: 5px;
+  padding: 2px 5px 2px 5px;
+}
+
+.context-submenu {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: -5px;
+  margin-left: 4px;
+  display: none;
+  z-index: 1001;
+  background-color: var(--menu-bg);
+  box-shadow: 0 5px 15px var(--menu-shadow);
+  padding: 6px 4px;
+  min-width: 220px;
+  border: 1px solid var(--menu-border);
+  border-radius: var(--menu-radius);
+  list-style: none;
+  margin: 0;
+}
+
+.context-menu-item.has-submenu::after {
+  content: "▶";
+  position: absolute;
+  right: 12px;
+  color: var(--item-indicator-color);
+  font-size: 12px;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background-color: var(--divider-color);
+  margin: 5px 4px;
+  list-style: none;
+}
+
+.eyedropper-btn {
+  width: 40px;
+}
+
+.eyedropper-btn:hover {
+  opacity: 0.7;
+  transition: 0.2s;
 }

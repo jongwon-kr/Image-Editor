@@ -1,8 +1,7 @@
-// @ts-nocheck
 "use strict";
 
 import { resizeImg } from "../utils/resizeImg.js";
-import { canvasToJsonData, restoreControlPoints } from "../utils/utils.js";
+import { canvasToJsonData } from "../utils/utils.js";
 import {
   retWgcTmplt,
   saveWgcTmplt,
@@ -80,9 +79,6 @@ function templates() {
     }
 
     const canvasJsonData = canvasToJsonData(_self.canvas);
-    canvasJsonData.objects = canvasJsonData.objects.filter(
-      (obj) => !obj.isControlPoint
-    );
     const filteredData = {
       objects: canvasJsonData.objects.filter((obj) => {
         const isValid = obj && typeof obj.type === "string";
@@ -238,13 +234,12 @@ function templates() {
   }
 
   async function openShareGallery() {
-    // 기존 모달 제거 (중복 생성 방지)
     const existingModal = document.querySelector(".custom-modal-container");
     if (existingModal) existingModal.remove();
 
     const shareGalleryModal = document.createElement("div");
     shareGalleryModal.classList.add("custom-modal-container");
-    shareGalleryModal.style.display = "none"; // 초기에는 숨김
+    shareGalleryModal.style.display = "none";
 
     const modalOverlay = document.createElement("div");
     modalOverlay.classList.add("modal-overlay");
@@ -328,7 +323,7 @@ function templates() {
     defaultTemplateButton = document.querySelector("#default-template");
 
     setTimeout(() => {
-      shareGalleryModal.style.display = "flex"; // 표시
+      shareGalleryModal.style.display = "flex";
       shareGalleryModal.classList.add("active");
     }, 10);
 
@@ -346,7 +341,7 @@ function templates() {
       setTimeout(() => {
         modal.style.display = "none";
         modal.remove();
-      }, 300); // 애니메이션 시간과 일치
+      }, 300);
     }
   }
 
@@ -695,7 +690,6 @@ function templates() {
             obj.selectable = false;
             obj.evented = false;
           }
-          restoreControlPoints(canvas, obj);
         } catch (err) {
           console.error(`객체 ${index} 처리 실패:`, err);
         }

@@ -1,4 +1,3 @@
-// @ts-nocheck
 const baseUrl = webRoot
   ? webRoot + "/ias/rest/wgc"
   : "http://localhost:8080/ias/rest/wgc";

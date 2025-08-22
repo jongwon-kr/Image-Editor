@@ -1,10 +1,6 @@
-// @ts-nocheck
 "use strict";
 
-import {
-  getFilteredFocusObjects,
-  getOverlayImages,
-} from "../utils/utils.js";
+import { getFilteredFocusObjects, getOverlayImages } from "../utils/utils.js";
 import { retForeImgUrl } from "../api/retForeImgUrl.js";
 import { retModelImgUrl } from "../api/retModelImgUrl.js";
 import { retOceanImgUrl } from "../api/retOceanImgUrl.js";
@@ -62,9 +58,7 @@ function layerListPanel() {
       `${_self.containerSelector} #layer-inner-list`
     );
     layerList.innerHTML = "";
-    let objects = getFilteredFocusObjects().filter(
-      (obj) => !obj.isControlPoint && !obj.overlayImage
-    );
+    let objects = getFilteredFocusObjects();
     if (layerType === "overlay") {
       objects = getOverlayImages();
       getOverlayImages().forEach((o) => {
@@ -93,29 +87,13 @@ function layerListPanel() {
       const actionButton =
         layerType === "object"
           ? `<button class="layer-button delete" title="삭제">
-          <svg id="Layer_1" x="0px" y="0px" viewBox="-25 -25 700 700" xml:space="preserve">
-            <g>
-              <g>
-                <path fill="red" d="M425.298,51.358h-91.455V16.696c0-9.22-7.475-16.696-16.696-16.696H194.855c-9.22,0-16.696,7.475-16.696,16.696v34.662 H86.704c-9.22,0-16.696,7.475-16.696,16.696v51.357c0,9.22,7.475,16.696,16.696,16.696h5.072l15.26,359.906 c0.378,8.937,7.735,15.988,16.68,15.988h264.568c8.946,0,16.302-7.051,16.68-15.989l15.259-359.906h5.073 c9.22,0,16.696-7.475,16.696-16.696V68.054C441.994,58.832,434.519,51.358,425.298,51.358z M211.551,33.391h88.9v17.967h-88.9 V33.391z M372.283,478.609H139.719l-14.522-342.502h261.606L372.283,478.609z M408.602,102.715c-15.17,0-296.114,0-305.202,0 V84.749h305.202V102.715z"></path>
-              </g>
-            </g>
-            <g>
-              <g>
-                <path fill="red" d="M188.835,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C205.53,194.779,198.055,187.304,188.835,187.304z"></path>
-              </g>
-            </g>
-            <g>
-              <g>
-                <path fill="red" d="M255.998,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.474,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C272.693,194.779,265.218,187.304,255.998,187.304z"></path>
-              </g>
-            </g>
-            <g>
-              <g>
-                <path fill="red" d="M323.161,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 s16.696-7.475,16.696-16.696V204C339.857,194.779,332.382,187.304,323.161,187.304z"></path>
-              </g>
-            </g>
-          </svg>
-        </button>`
+            <svg id="Layer_1" x="0px" y="0px" viewBox="-25 -25 700 700" xml:space="preserve">
+              <g><g><path fill="red" d="M425.298,51.358h-91.455V16.696c0-9.22-7.475-16.696-16.696-16.696H194.855c-9.22,0-16.696,7.475-16.696,16.696v34.662 H86.704c-9.22,0-16.696,7.475-16.696,16.696v51.357c0,9.22,7.475,16.696,16.696,16.696h5.072l15.26,359.906 c0.378,8.937,7.735,15.988,16.68,15.988h264.568c8.946,0,16.302-7.051,16.68-15.989l15.259-359.906h5.073 c9.22,0,16.696-7.475,16.696-16.696V68.054C441.994,58.832,434.519,51.358,425.298,51.358z M211.551,33.391h88.9v17.967h-88.9 V33.391z M372.283,478.609H139.719l-14.522-342.502h261.606L372.283,478.609z M408.602,102.715c-15.17,0-296.114,0-305.202,0 V84.749h305.202V102.715z"></path></g></g>
+              <g><g><path fill="red" d="M188.835,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C205.53,194.779,198.055,187.304,188.835,187.304z"></path></g></g>
+              <g><g><path fill="red" d="M255.998,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.474,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C272.693,194.779,265.218,187.304,255.998,187.304z"></path></g></g>
+              <g><g><path fill="red" d="M323.161,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 s16.696-7.475,16.696-16.696V204C339.857,194.779,332.382,187.304,323.161,187.304z"></path></g></g>
+            </svg>
+          </button>`
           : `<button class="layer-button open-setting" title="설정"></button>`;
 
       layerList.insertAdjacentHTML(
@@ -159,6 +137,7 @@ function layerListPanel() {
         layer.classList.remove("drop-target");
       });
 
+      // --- 드래그 앤 드롭 로직 수정 (bringObjectForward/sendObjectBackwards 활용) ---
       layer.addEventListener("drop", (e) => {
         e.preventDefault();
         layer.classList.remove("drop-target");
@@ -167,42 +146,32 @@ function layerListPanel() {
 
         if (draggedId === droppedId) return;
 
-        const draggedLayer = layerList.querySelector(
-          `.layer[data-object="${draggedId}"]`
+        const allCanvasObjects = _self.canvas.getObjects();
+        const draggedObject = allCanvasObjects.find(
+          (obj) => obj.id === draggedId
         );
-        const droppedLayer = layerList.querySelector(
-          `.layer[data-object="${droppedId}"]`
+        const droppedObject = allCanvasObjects.find(
+          (obj) => obj.id === droppedId
         );
-        const allLayers = Array.from(layerList.querySelectorAll(".layer"));
-
-        const draggedIndex = allLayers.indexOf(draggedLayer);
-        const droppedIndex = allLayers.indexOf(droppedLayer);
-
-        if (draggedIndex < droppedIndex) {
-          layerList.insertBefore(draggedLayer, droppedLayer.nextSibling);
-        } else {
-          layerList.insertBefore(draggedLayer, droppedLayer);
-        }
-
-        const draggedObject = _self.canvas
-          .getObjects()
-          .find((obj) => obj.id === draggedId);
-        const droppedObject = _self.canvas
-          .getObjects()
-          .find((obj) => obj.id === droppedId);
 
         if (draggedObject && droppedObject) {
-          const canvasObjects = _self.canvas.getObjects();
-          const draggedCanvasIndex = canvasObjects.indexOf(draggedObject);
-          const droppedCanvasIndex = canvasObjects.indexOf(droppedObject);
+          const draggedIndex = allCanvasObjects.indexOf(draggedObject);
+          const droppedIndex = allCanvasObjects.indexOf(droppedObject);
+          const steps = Math.abs(draggedIndex - droppedIndex);
 
-          _self.canvas.remove(draggedObject);
-          _self.canvas.insertAt(draggedObject, droppedCanvasIndex);
+          if (draggedIndex < droppedIndex) {
+            for (let i = 0; i < steps; i++) {
+              _self.canvas.bringObjectForward(draggedObject);
+            }
+          } else {
+            for (let i = 0; i < steps; i++) {
+              _self.canvas.sendObjectBackwards(draggedObject);
+            }
+          }
+
           _self.canvas.fire("object:modified");
           _self.canvas.renderAll();
         }
-
-        updateLayers();
       });
     });
 

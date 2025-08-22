@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { imgEditor } from "../index.ts";
 import { removeTooltip } from "../ui/toolbar.js";
 

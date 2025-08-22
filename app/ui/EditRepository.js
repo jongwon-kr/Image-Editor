@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use strict";
 
 import {
@@ -9,7 +8,6 @@ import {
 } from "../api/wgcApiService.js";
 import { imgEditor } from "../index.ts";
 import { resizeImg } from "../utils/resizeImg.js";
-import { restoreControlPoints } from "../utils/utils.js";
 
 const currentUsr = currentUserId;
 
@@ -416,9 +414,8 @@ async function applyData(data) {
         throw new Error("편집 데이터를 가져올 수 없습니다.");
       }
       const parsedData = JSON.parse(editData);
-      console.log(parsedData);
       imgEditor.canvas.clear();
-      
+
       const viewportTransform = parsedData.viewportTransform || [
         1, 0, 0, 1, 0, 0,
       ];
@@ -449,12 +446,11 @@ async function applyData(data) {
           obj.selectable = false;
           obj.evented = false;
         }
-        restoreControlPoints(imgEditor.canvas, obj);
       });
 
       alert(`"${data.wkNm}" 데이터가 적용되었습니다.`);
       imgEditor.history.clear();
-      
+
       imgEditor.canvas.fire("object:modified");
       imgEditor.canvas.renderAll();
     } catch (error) {

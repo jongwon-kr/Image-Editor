@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { ICONS } from "../models/featIcons.ts";
 import { mapArea } from "../api/data/mapArea.js";
 import { setBackMapImg, getBackMapImg } from "../api/retBackMapUrl.js";
 import { resizeImg } from "../utils/resizeImg.js";
@@ -157,17 +157,11 @@ function canvasSettings() {
     const colorPicker = $(
       `${this.containerSelector} .toolpanel#background-panel .content #color-picker`
     );
-    colorPicker.spectrum({
-      showPalette: false,
-      showButtons: false,
-      type: "color",
-      showInput: true,
-      allowEmpty: true,
-      move: function (color) {
-        const hex = color ? color.toRgbString() : "transparent";
-        _self.canvas.backgroundColor = hex;
-        _self.canvas.renderAll();
-      },
+
+    initializeColorPickerWithEyedropper(colorPicker, (color) => {
+      const hex = color ? color.toRgbString() : "transparent";
+      _self.canvas.backgroundColor = hex;
+      _self.canvas.renderAll();
     });
 
     const bgPanelContent = document.querySelector(
@@ -864,6 +858,37 @@ function canvasSettings() {
       selectedOptions = selectedOptions.filter((option) => option !== value);
     }
     setBackMapImg(selectedMapArea, selectedOptions);
+  }
+
+  function initializeColorPickerWithEyedropper(pickerElement, onColorChange) {
+    const spectrumOptions = {
+      showButtons: false,
+      type: "color",
+      showInput: true,
+      allowEmpty: true,
+      move: onColorChange,
+    };
+
+    pickerElement.spectrum(spectrumOptions);
+
+    if (window.EyeDropper) {
+      const eyedropperBtn = document.createElement("button");
+      eyedropperBtn.className = "eyedropper-btn";
+      eyedropperBtn.innerHTML = ICONS.eyeDrop;
+      pickerElement.parent().append(eyedropperBtn);
+
+      eyedropperBtn.addEventListener("click", async () => {
+        try {
+          const eyeDropper = new EyeDropper();
+          const result = await eyeDropper.open();
+          const newColor = tinycolor(result.sRGBHex);
+          pickerElement.spectrum("set", newColor);
+          onColorChange(newColor);
+        } catch (e) {
+          console.log("Color selection cancelled.");
+        }
+      });
+    }
   }
 
   initCanvasSizeSection();

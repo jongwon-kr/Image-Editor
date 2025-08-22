@@ -1,25 +1,25 @@
-import { Arrow } from "./customTools/Arrow.js";
+import { CurvedLine } from "./customTools/CurvedLine.js";
 import { generateUniqueId } from "../utils/drawingUtils.ts";
-import { defaultShapeSettings, ArrowHeadStyle } from "../utils/constants.ts";
+import { defaultShapeSettings } from "../utils/constants.ts";
 
 /**
  * @param {fabric.Canvas} canvas
  */
-export function arrowDrawing(canvas) {
+export function curvedLineDrawing(canvas) {
   let isDrawing = false;
-  let arrow = null;
+  let curvedLine = null;
   let startPoint = null;
 
   /**
    * @param {object} opt
    */
   const startDrawing = (opt) => {
-    if (!canvas.isDrawingArrowMode) return;
+    if (!canvas.isDrawingCurvedLineMode) return;
     isDrawing = true;
     const pointer = canvas.getPointer(opt.e);
     startPoint = { x: pointer.x, y: pointer.y };
 
-    arrow = new Arrow(
+    curvedLine = new CurvedLine(
       `M ${startPoint.x} ${startPoint.y} L ${startPoint.x} ${startPoint.y}`,
       {
         id: generateUniqueId(),
@@ -33,11 +33,10 @@ export function arrowDrawing(canvas) {
         originY: "top",
         left: startPoint.x,
         top: startPoint.y,
-        startArrowHeadStyle: ArrowHeadStyle.NoHead,
-        endArrowHeadStyle: ArrowHeadStyle.FilledHead,
+        isDrawing: true,
       }
     );
-    canvas.add(arrow);
+    canvas.add(curvedLine);
     canvas.renderAll();
   };
 
@@ -45,7 +44,7 @@ export function arrowDrawing(canvas) {
    * @param {object} opt
    */
   const continueDrawing = (opt) => {
-    if (!isDrawing || !arrow) return;
+    if (!isDrawing || !curvedLine) return;
     const pointer = canvas.getPointer(opt.e);
     const shiftPressed = opt.e.shiftKey;
 
@@ -62,10 +61,9 @@ export function arrowDrawing(canvas) {
       endY = startPoint.y + length * Math.sin(snappedAngle);
     }
 
-    arrow.path[1][1] = endX;
-    arrow.path[1][2] = endY;
-
-    arrow._updateArrow();
+    curvedLine.path[1][1] = endX;
+    curvedLine.path[1][2] = endY;
+    curvedLine.set({ isDrawing: true });
     canvas.renderAll();
   };
 
@@ -73,7 +71,7 @@ export function arrowDrawing(canvas) {
    * @param {object} opt
    */
   const stopDrawing = (opt) => {
-    if (!isDrawing || !arrow) return;
+    if (!isDrawing || !curvedLine) return;
     isDrawing = false;
 
     const pointer = canvas.getPointer(opt.e);
@@ -91,12 +89,12 @@ export function arrowDrawing(canvas) {
       endY = startPoint.y + length * Math.sin(snappedAngle);
     }
 
-    arrow.path[1][1] = endX;
-    arrow.path[1][2] = endY;
-    arrow.convertToCurve();
+    curvedLine.path[1][1] = endX;
+    curvedLine.path[1][2] = endY;
 
-    const dims = arrow._calcDimensions();
-    arrow.set({
+    curvedLine.convertToCurved();
+    const dims = curvedLine._calcDimensions();
+    curvedLine.set({
       left: dims.left,
       top: dims.top,
       width: dims.width,
@@ -105,18 +103,17 @@ export function arrowDrawing(canvas) {
         x: dims.width / 2 + dims.left,
         y: dims.height / 2 + dims.top,
       },
+      isDrawing: false,
       selectable: true,
       evented: true,
+      originX: "left",
+      originY: "top",
     });
 
-    arrow._updateArrow();
-    arrow.setCoords();
-
-    canvas.setActiveObject(arrow);
-    canvas.fire("object:modified", { target: arrow });
+    canvas.setActiveObject(curvedLine);
+    canvas.fire("object:modified", { target: curvedLine });
     canvas.renderAll();
-
-    arrow = null;
+    curvedLine = null;
     startPoint = null;
   };
 

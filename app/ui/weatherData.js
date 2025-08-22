@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { mapArea } from "../api/data/mapArea.js";
 import { retForeImgUrl } from "../api/retForeImgUrl.js";
 import { retModelImgUrl } from "../api/retModelImgUrl.js";

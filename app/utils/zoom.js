@@ -1,6 +1,4 @@
-// @ts-nocheck
 import { imgEditor } from "../index.ts";
-import { updateScaleControlPoints } from "./utils.js";
 
 /**
  * 줌 기능 정의
@@ -58,7 +56,6 @@ function zoom() {
     _self.canvas.setHeight(_self.canvas.originalH * currentZoomLevel);
 
     _self.inputZoomLevel(currentZoomLevel);
-    updateScaleControlPoints(_self.canvas);
     _self.canvas.renderAll();
     imgEditor.updateInputFields();
   };

@@ -1,42 +1,3 @@
-// @ts-nocheck
-
-/**
- * 통합 기상 분석
- * 예측 변수 이미지 API
- */
-async function retBackMapUrl(params) {
-  // 기본 파라미터
-  const defaultParams = {
-    type: "IMG",
-    projection: "LCC",
-    stLon: 124.46125788672794,
-    stLat: 38.63520187576005,
-    edLon: 131.50677366893,
-    edLat: 32.61462864983293,
-    mdLon: 128.14708960972132,
-    mdLat: 35.67482751320959,
-    ZOOMLVL: 13,
-    meta: 0,
-  };
-
-  const mergedParams = new URLSearchParams({
-    ...Object.assign({}, defaultParams, params),
-  });
-
-  try {
-    showLoader();
-    const response = await fetch(
-      `http://afs2.kma-dev.go.kr/uwa/iwa/api/iwaImgUrlApi/retBackMapUrl.kaf?${mergedParams.toString()}`
-    );
-
-    return response;
-  } catch (error) {
-    console.log("조회에 실패하였습니다. 에러 내용:", error);
-  } finally {
-    hideLoader();
-  }
-}
-
 /**
  * 배경 지도 설정
  */
@@ -105,4 +66,4 @@ function hideLoader() {
   loader.style.display = "none";
 }
 
-export { retBackMapUrl, setBackMapImg, getBackMapImg };
+export { setBackMapImg, getBackMapImg };

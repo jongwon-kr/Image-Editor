@@ -1,19 +1,14 @@
-// @ts-nocheck
 import { initializeShapes } from "./drawing-tools/shapes.js";
-import { lineDrawing } from "./drawing-tools/drawingLine.js";
+import { curvedLineDrawing } from "./drawing-tools/drawingCurvedLine.js";
 import { arrowDrawing } from "./drawing-tools/drawingArrow.js";
-import { pathDrawing } from "./drawing-tools/drawingPath.js";
+import { polyPathDrawing } from "./drawing-tools/drawingPolyPath.js";
 import { textBoxDrawing } from "./drawing-tools/drawingText.js";
-import { WeatherFrontLine } from "./drawing-tools/weatherFrontLine copy.js";
-import {
-  generateWeatherFrontPath,
-  removeAllFrontShapes,
-  weatherFrontDrawing,
-} from "./drawing-tools/drawingWeatherFront.js";
+import { weatherFrontLineDrawing } from "./drawing-tools/drawingWeatherFrontLine.js";
+
 import { defaultTips, tipPanel } from "./ui/tip.js";
 import { weatherData } from "./ui/weatherData.js";
 import { images } from "./ui/images.js";
-import { canvas, processWeatherFronts } from "./ui/canvas.js";
+import { canvas } from "./ui/canvas.js";
 import { toolbar } from "./ui/toolbar.js";
 import { freeDrawSettings } from "./ui/freeDrawSettings.js";
 import { canvasSettings } from "./ui/canvasSettings.js";
@@ -23,13 +18,12 @@ import { zoom } from "./utils/zoom.js";
 import { templates } from "./ui/templates.js";
 import { fullscreen } from "./utils/fullScreen.js";
 import { layerListPanel } from "./ui/layerListPanel.js";
-import {
-  getDeleteArea,
-  getFrontShapes,
-  restoreControlPoints,
-} from "./utils/utils.js";
+import { getDeleteArea } from "./utils/utils.js";
 import { testPanel } from "./ui/testPanel.js";
 import { fetchEditData } from "./ui/EditRepository.js";
+import { ellipseDrawing } from "./drawing-tools/drawingEllipse.js";
+import { triangleDrawing } from "./drawing-tools/drawingTriangle.js";
+import { rectDrawing } from "./drawing-tools/drawingRect.js";
 
 /**
  * @param {String} containerSelector jquery selector for image editor container
@@ -66,17 +60,7 @@ class ImageEditor {
     const canvasJSON = this.canvas.toJSON([
       "id",
       "noFocusing",
-      "controlPoints",
-      "shapeObjects",
-      "pathType",
-      "frontType",
-      "startHead",
-      "endHead",
       "path",
-      "pathD",
-      "p0",
-      "p1",
-      "p2",
       "label",
       "desc",
       "apiType",
@@ -86,8 +70,6 @@ class ImageEditor {
       "overlayImage",
       "isReflect",
       "isDelete",
-      "isScaledInGroup",
-      "lastTransformMatrix",
     ]);
     canvasJSON.viewportTransform = this.canvas.viewportTransform;
     canvasJSON.width = this.canvas.getWidth();
@@ -118,9 +100,7 @@ class ImageEditor {
           obj.selectable = false;
           obj.evented = false;
         }
-        restoreControlPoints(this.canvas, obj);
       });
-      processWeatherFronts(this.canvas.getObjects(), this.canvas);
       this.canvas.renderAll();
     } catch (error) {
       console.error("Failed to load canvas JSON:", error);
@@ -131,7 +111,6 @@ class ImageEditor {
   setActiveTool = (id) => {
     this.activeTool = id;
 
-    // 툴바 버튼 활성화/비활성화
     document
       .querySelectorAll(`${this.containerSelector} #toolbar button`)
       .forEach((btn) => btn.classList.remove("active"));
@@ -143,7 +122,6 @@ class ImageEditor {
         }
       });
 
-    // 툴 패널 표시/숨김
     const toolPanels = document.querySelectorAll(
       `${this.containerSelector} .toolpanel`
     );
@@ -161,42 +139,37 @@ class ImageEditor {
       }
     }
 
-    // 선택 해제
     if (id !== "select") {
       this.canvas.discardActiveObject();
       this.canvas.renderAll();
       this.activeSelection = null;
     }
 
-    // 캔버스 모드 초기화
     this.canvas.isHandleMode = false;
     this.canvas.isCuttingMode = false;
     this.canvas.isColorFilterMode = false;
-    this.canvas.isDrawingLineMode = false;
-    this.canvas.isDrawingPathMode = false;
-    this.canvas.isDrawingWeatherFrontMode = false;
+    this.canvas.isDrawingEllipseMode = false;
+    this.canvas.isDrawingTriangleMode = false;
+    this.canvas.isDrawingRectMode = false;
+    this.canvas.isDrawingCurvedLineMode = false;
+    this.canvas.isDrawingArrowMode = false;
+    this.canvas.isDrawingPolyPathMode = false;
+    this.canvas.isDrawingWeatherFrontLineMode = false;
     this.canvas.isDrawingMode = false;
     this.canvas.isDrawingTextMode = false;
-    this.canvas.isDrawingArrowMode = false;
     this.canvas.defaultCursor = "default";
     this.canvas.selection = true;
 
-    // 모든 객체 선택 가능 설정
     this.canvas.forEachObject((o) => {
       o.selectable = true;
       o.evented = true;
     });
 
-    getFrontShapes().forEach((o) => {
-      o.selectable = false;
-      o.evented = false;
-    });
     getDeleteArea().forEach((o) => {
       o.selectable = false;
       o.evented = false;
     });
 
-    // draw 모드가 아닌 경우 cleanup 호출
     if (id !== "draw" && this.cleanupDrawMode) {
       this.cleanupDrawMode();
     }
@@ -252,18 +225,8 @@ class ImageEditor {
           "Tip: 도형 그리기 패널의 도형을 클릭하여 캔버스에 추가할 수 있습니다."
         );
         break;
-      case "draw":
-        this.canvas.isDrawingMode = true;
-        this.canvas.upperCanvasEl.style.cursor = "none";
-        if (this.activateDrawMode) {
-          this.activateDrawMode(); // draw 모드 활성화
-        }
-        this.updateTip(
-          "Tip: 드래그로 자유롭게 그릴 수 있어요! 지우개 모드로 전환도 가능합니다."
-        );
-        break;
-      case "line":
-        this.canvas.isDrawingLineMode = true;
+      case "ellipse":
+        this.canvas.isDrawingEllipseMode = true;
         this.canvas.defaultCursor = "crosshair";
         this.canvas.selection = false;
         this.canvas.forEachObject((o) => {
@@ -271,7 +234,53 @@ class ImageEditor {
           o.evented = false;
         });
         this.updateTip(
-          "Tip: 드래그로 선을 그리고 제어점을 이용해 선을 수정할 수 있습니다! Shift를 누르면 직선을 그릴 수 있어요!"
+          "Tip: 드래그를 통해 타원을 그릴 수 있습니다. shift를 누른 채 그리면 원을 그릴 수 있습니다."
+        );
+        break;
+      case "triangle":
+        this.canvas.isDrawingTriangleMode = true;
+        this.canvas.defaultCursor = "crosshair";
+        this.canvas.selection = false;
+        this.canvas.forEachObject((o) => {
+          o.selectable = false;
+          o.evented = false;
+        });
+        this.updateTip(
+          "Tip: 드래그를 통해 삼각형을 그릴 수 있습니다. shift를 누른 채 그리면 정삼각형을 그릴 수 있습니다."
+        );
+        break;
+      case "rect":
+        this.canvas.isDrawingRectMode = true;
+        this.canvas.defaultCursor = "crosshair";
+        this.canvas.selection = false;
+        this.canvas.forEachObject((o) => {
+          o.selectable = false;
+          o.evented = false;
+        });
+        this.updateTip(
+          "Tip: 드래그를 통해 사각형을 그릴 수 있습니다. shift를 누른 채 그리면 정사각형을 그릴 수 있습니다."
+        );
+        break;
+      case "draw":
+        this.canvas.isDrawingMode = true;
+        this.canvas.upperCanvasEl.style.cursor = "none";
+        if (this.activateDrawMode) {
+          this.activateDrawMode();
+        }
+        this.updateTip(
+          "Tip: 드래그로 자유롭게 그릴 수 있어요! 지우개 모드로 전환도 가능합니다."
+        );
+        break;
+      case "curvedLine":
+        this.canvas.isDrawingCurvedLineMode = true;
+        this.canvas.defaultCursor = "crosshair";
+        this.canvas.selection = false;
+        this.canvas.forEachObject((o) => {
+          o.selectable = false;
+          o.evented = false;
+        });
+        this.updateTip(
+          "Tip: 드래그로 곡선을 그리고 제어점을 이용해 곡선을 수정할 수 있습니다!"
         );
         break;
       case "arrow":
@@ -283,11 +292,11 @@ class ImageEditor {
           o.evented = false;
         });
         this.updateTip(
-          "Tip: 드래그로 선을 그리고 제어점을 이용해 선을 수정할 수 있습니다! Shift를 누르면 직선을 그릴 수 있어요! 이후 화살표 머리를 수정할 수 있어요"
+          "Tip: 드래그로 화살표를 그리고 제어점을 이용해 수정할 수 있습니다!"
         );
         break;
       case "path":
-        this.canvas.isDrawingPathMode = true;
+        this.canvas.isDrawingPolyPathMode = true;
         this.canvas.defaultCursor = "crosshair";
         this.canvas.selection = false;
         this.canvas.forEachObject((o) => {
@@ -298,8 +307,8 @@ class ImageEditor {
           "Tip: 클릭하여 좌표를 배치하고, 바깥쪽을 클릭하거나 Esc 키를 눌러 완성하세요!"
         );
         break;
-      case "weatherFront":
-        this.canvas.isDrawingWeatherFrontMode = true;
+      case "weatherFrontLine":
+        this.canvas.isDrawingWeatherFrontLineMode = true;
         this.canvas.defaultCursor = "crosshair";
         this.canvas.selection = false;
         this.canvas.forEachObject((o) => {
@@ -310,7 +319,7 @@ class ImageEditor {
           "Tip: 클릭하여 좌표를 배치하고, 바깥쪽을 클릭하거나 Esc 키를 눌러 완성하세요! 이후 다른 전선으로 수정할 수 있습니다."
         );
         break;
-      case "textbox":
+      case "ctextbox":
         this.canvas.isDrawingTextMode = true;
         this.canvas.defaultCursor = "crosshair";
         this.canvas.selection = false;
@@ -362,9 +371,7 @@ class ImageEditor {
       }
 
       this.history.undo();
-      removeAllFrontShapes(this.canvas);
       await this.setCanvasJSON(current);
-      console.log(this.history.getValues());
     } catch (error) {
       console.error("undo failed:", error);
     } finally {
@@ -389,9 +396,7 @@ class ImageEditor {
       }
 
       this.history.redo();
-      removeAllFrontShapes(this.canvas);
       await this.setCanvasJSON(current);
-      console.log(this.history.getValues());
     } catch (error) {
       console.error("redo failed:", error);
     } finally {
@@ -442,14 +447,6 @@ class ImageEditor {
       });
 
       objectsToRemove.forEach((obj) => {
-        if (obj.controlPoints) {
-          obj.controlPoints.forEach((point) => this.canvas.remove(point));
-          obj.controlPoints = [];
-        }
-        if (obj.shapeObjects) {
-          obj.shapeObjects.forEach((shape) => this.canvas.remove(shape));
-          obj.shapeObjects = [];
-        }
         this.canvas.remove(obj);
       });
 
@@ -459,13 +456,10 @@ class ImageEditor {
           obj.evented = false;
         }
         this.canvas.add(obj);
-        restoreControlPoints(this.canvas, obj);
         if (obj.pathType === "weatherFront") {
           generateWeatherFrontPath(obj, this.canvas);
         }
       });
-
-      processWeatherFronts(this.canvas.getObjects(), this.canvas);
 
       this.canvas.renderAll();
     } catch (error) {
@@ -475,23 +469,11 @@ class ImageEditor {
   };
 
   updateObjectProperties = (currentObj, newObj) => {
-    // 모든 속성 동적으로 비교
     const allProps = new Set([
       ...Object.keys(currentObj.toObject()),
       ...Object.keys(newObj.toObject()),
-      // 커스텀 속성 추가
       "noFocusing",
-      "controlPoints",
-      "shapeObjects",
-      "pathType",
-      "frontType",
-      "startHead",
-      "endHead",
       "path",
-      "pathD",
-      "p0",
-      "p1",
-      "p2",
       "label",
       "desc",
       "apiType",
@@ -502,13 +484,12 @@ class ImageEditor {
       const currentValue = currentObj[prop];
       const newValue = newObj[prop];
 
-      // 속성 값 비교 (깊은 비교)
       if (JSON.stringify(currentValue) !== JSON.stringify(newValue)) {
-        return true; // 변경사항이 있으면 즉시 true 반환
+        return true;
       }
     }
 
-    return false; // 변경사항 없음
+    return false;
   };
 
   configUndoRedoStack = () => {
@@ -522,7 +503,7 @@ class ImageEditor {
         document.querySelectorAll("textarea:focus, input:focus").length === 0 &&
         !this.isProcessing
       ) {
-        e.preventDefault(); // 브라우저 기본 동작 방지
+        e.preventDefault();
         if (key === 90 && this.history.getValues().undo.length > 0) {
           this.undo();
         } else if (key === 89 && this.history.getValues().redo.length > 0) {
@@ -531,10 +512,8 @@ class ImageEditor {
       }
     };
 
-    // 기존 이벤트 리스너 제거
     document.removeEventListener("keydown", this._handleKeyDown);
 
-    // 새 이벤트 리스너 등록
     this._handleKeyDown = handleKeyDown;
     document.addEventListener("keydown", handleKeyDown);
   };
@@ -548,24 +527,36 @@ class ImageEditor {
     tipPanel.call(this);
   }
 
+  initializeEllipseDrawing() {
+    ellipseDrawing(this.canvas);
+  }
+
+  initializeTriangleDrawing() {
+    triangleDrawing(this.canvas);
+  }
+
+  initializeRectDrawing() {
+    rectDrawing(this.canvas);
+  }
+
   initializeShapes() {
     initializeShapes(this);
   }
 
-  initializeLineDrawing() {
-    lineDrawing(this.canvas);
+  initializeCurvedLineDrawing() {
+    curvedLineDrawing(this.canvas);
   }
 
   initializeArrowDrawing() {
-    arrowDrawing(this.canvas);
+    arrowDrawing.call(this, this.canvas);
   }
 
-  initializePathDrawing() {
-    pathDrawing(this.canvas);
+  initializePolyPathDrawing() {
+    polyPathDrawing(this.canvas);
   }
 
-  initializeWeatherFrontDrawing() {
-    weatherFrontDrawing(this.canvas);
+  initializeWeatherFrontLineDrawing() {
+    weatherFrontLineDrawing(this.canvas);
   }
 
   initializeTextBoxDrawing() {
@@ -706,10 +697,13 @@ class ImageEditor {
     this.initializeSelectionSettings();
     this.initializeCopyPaste();
     this.initializeLayerListPanel();
-    this.initializeLineDrawing();
+    this.initializeEllipseDrawing();
+    this.initializeTriangleDrawing();
+    this.initializeRectDrawing();
+    this.initializeCurvedLineDrawing();
     this.initializeArrowDrawing();
-    this.initializePathDrawing();
-    this.initializeWeatherFrontDrawing();
+    this.initializePolyPathDrawing();
+    this.initializeWeatherFrontLineDrawing();
     this.initializeTextBoxDrawing();
     this.initializeWeatherData();
     this.initializeImages();

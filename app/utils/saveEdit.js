@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { saveWgcEdit } from "../api/wgcApiService.js";
 import { imgEditor } from "../index.ts";
 
@@ -10,9 +9,6 @@ import { imgEditor } from "../index.ts";
 function save(name, value) {
   let dataToSave = value;
   if (value && typeof value === "object" && !Array.isArray(value)) {
-    if (value.objects && Array.isArray(value.objects)) {
-      value.objects = value.objects.filter((obj) => !obj.frontShape);
-    }
     value.width = parseInt(imgEditor.canvas.getWidth());
     value.height = parseInt(imgEditor.canvas.getHeight());
     dataToSave = JSON.stringify(value);

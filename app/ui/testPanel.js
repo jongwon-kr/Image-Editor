@@ -1,4 +1,3 @@
-// @ts-nocheck
 function testPanel() {
   const _self = this;
   const mainPanel = document.querySelector(

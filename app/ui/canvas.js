@@ -1,26 +1,12 @@
-// @ts-nocheck
 import { imgEditor } from "../index.ts";
 import { save, load } from "../utils/saveEdit.js";
 import {
   canvasToJsonData,
-  getControlPoint,
-  getFilteredFocusObjects,
-  restoreControlPoints,
+  removeObjects,
+  selectAllObjects,
 } from "../utils/utils.js";
 import { syncPanelWithSelection } from "./selectionSettings.js";
-import {
-  attachControlPoints as attachLineControlPoints,
-  updateControlPoints as updateLineControlPoints,
-} from "../drawing-tools/drawingLine.js";
-import {
-  attachControlPoints as attachArrowControlPoints,
-  updateControlPoints as updateArrowControlPoints,
-} from "../drawing-tools/drawingArrow.js";
-import { attachControlPoints as attachPathControlPoints } from "../drawing-tools/drawingPath.js";
-import {
-  attachControlPoints as attachWeatherFrontControlPoints,
-  generateWeatherFrontPath,
-} from "../drawing-tools/drawingWeatherFront.js";
+import { openMenu } from "../utils/contextMenu.ts";
 
 async function canvas() {
   let prevPosition = { left: 0, top: 0 };
@@ -85,7 +71,6 @@ async function canvas() {
   imgIcon.src = rotateIcon;
 
   try {
-    // main-panel 확인
     const mainPanel = document.querySelector(
       `${this.containerSelector} .main-panel`
     );
@@ -93,37 +78,32 @@ async function canvas() {
       throw new Error(`Main panel not found in ${this.containerSelector}`);
     }
 
-    // 캔버스 홀더 추가
     mainPanel.insertAdjacentHTML(
       "beforeend",
       `<div class="canvas-holder" id="canvas-holder"><div class="content"><canvas id="c"></canvas></div></div>`
     );
 
-    // DOM이 준비될 때까지 대기
     await new Promise((resolve) => {
       const checkCanvas = () => {
         const canvasEl = document.querySelector("#c");
         if (canvasEl) {
           resolve(canvasEl);
         } else {
-          setTimeout(checkCanvas, 50); // 50ms 후 재시도
+          setTimeout(checkCanvas, 50);
         }
       };
       checkCanvas();
     });
 
-    // 캔버스 요소 확인
     const canvasEl = document.querySelector("#c");
     if (!canvasEl) {
       throw new Error("Canvas element with id 'c' not found after retry");
     }
 
-    // fabric.js 로드 확인
     if (typeof fabric === "undefined") {
       throw new Error("fabric.js is not loaded");
     }
 
-    // fabric.Canvas 생성
     const fabricCanvas = new fabric.Canvas(canvasEl, {
       selectionFullyContained: true,
       fireRightClick: true,
@@ -134,27 +114,10 @@ async function canvas() {
       height: this.dimensions.height,
     });
 
-    // 캔버스 초기화 확인
     if (!fabricCanvas || !fabricCanvas.getContext()) {
       throw new Error("Failed to create fabric.Canvas instance or get context");
     }
 
-    fabric.InteractiveFabricObject.ownDefaults = {
-      ...fabric.InteractiveFabricObject.ownDefaults,
-      transparentCorners: false,
-      cornerStyle: "circle",
-      selectable: true,
-      evented: true,
-      hasControls: true,
-      hasBorders: true,
-      lockScalingFlip: true,
-      cornerSize: 11,
-      cornerColor: "#ffffff",
-      cornerStrokeColor: "#000000",
-      borderColor: "#555555",
-    };
-
-    // 캔버스 기본 설정
     fabricCanvas.originalW = fabricCanvas.width;
     fabricCanvas.originalH = fabricCanvas.height;
     fabricCanvas.backgroundColor = "#ffffff";
@@ -162,11 +125,6 @@ async function canvas() {
     fabricCanvas.selectionColor = "rgba(0, 120, 215, 0.2)";
     fabricCanvas.selectionBorderColor = "rgba(0, 120, 215, 0.8)";
     fabricCanvas.selectionLineWidth = 1;
-
-    // 컨트롤 객체 초기화 확인 및 설정
-    if (!fabric.Object.prototype.controls) {
-      fabric.Object.prototype.controls = {};
-    }
 
     function renderIcon(ctx, left, top, styleOverride, fabricObject) {
       const size = this.cornerSize;
@@ -185,112 +143,70 @@ async function canvas() {
       }
       ctx.restore();
     }
+    const customMtrControl = new fabric.Control({
+      x: 0,
+      y: -0.5,
+      offsetX: 0,
+      offsetY: -40,
+      actionHandler: fabric.controlsUtils?.rotationWithSnapping || (() => {}),
+      actionName: "rotate",
+      render: renderIcon,
+      cursorStyleHandler: (eventData, control, fabricObject) => {
+        return fabricObject.lockRotation
+          ? "not-allowed"
+          : `url("data:image/svg+xml;charset=utf-8,${imgCursor}") 12 12, crosshair`;
+      },
+      cornerSize: 40,
+      withConnection: true,
+    });
 
     fabric.Object.prototype.controls = {
       ...fabric.Object.prototype.controls,
-      mtr: new fabric.Control({
-        x: 0,
-        y: -0.5,
-        offsetX: 0,
-        offsetY: -40,
-        actionHandler: fabric.controlsUtils?.rotationWithSnapping || (() => {}),
-        actionName: "rotate",
-        render: renderIcon,
-        cursorStyleHandler: (eventData, control, fabricObject) => {
-          return fabricObject.lockRotation
-            ? "not-allowed"
-            : `url("data:image/svg+xml;charset=utf-8,${imgCursor}") 12 12, crosshair`;
-        },
-        cornerSize: 40,
-        withConnection: true,
-      }),
+      mtr: customMtrControl,
     };
 
-    // Textbox 컨트롤 설정
-    fabric.Textbox.prototype.controls = {
-      ...fabric.Textbox.prototype.controls,
-      mtr: fabric.Object.prototype.controls.mtr,
+    const originalCreateControls =
+      fabric.InteractiveFabricObject.createControls;
+
+    fabric.InteractiveFabricObject.createControls = function () {
+      const controls = originalCreateControls.call(this);
+      controls.controls.mtr = customMtrControl;
+      return controls;
     };
 
-    // Textbox 컨트롤 설정
-    fabric.Path.prototype.controls = {
-      ...fabric.Textbox.prototype.controls,
-      mtr: fabric.Object.prototype.controls.mtr,
+    fabric.InteractiveFabricObject.ownDefaults = {
+      ...fabric.InteractiveFabricObject.ownDefaults,
+      transparentCorners: false,
+      cornerStyle: "circle",
+      selectable: true,
+      evented: true,
+      hasControls: true,
+      hasBorders: true,
+      lockScalingFlip: false,
+      cornerSize: 10,
+      cornerColor: "#ffffff",
+      cornerStrokeColor: "#000000",
+      borderColor: "#555555",
     };
 
-    // Rect 컨트롤 설정
-    fabric.Rect.prototype.controls = {
-      ...fabric.Rect.prototype.controls,
-      mtr: fabric.Object.prototype.controls.mtr,
-    };
-
-    // 이벤트 핸들러 설정
     fabricCanvas.on("mouse:down", (opt) => {
-      opt.e.preventDefault();
-      if (opt.e.button === 2) {
-        // 우클릭
-        return;
-      }
-
-      const evt = opt.e;
-      const pointer = fabricCanvas.getPointer(evt);
-      const zoom = fabricCanvas.getZoom();
-      const vpt = fabricCanvas.viewportTransform;
-      const activeObject = fabricCanvas.getActiveObject();
-
-      // 컨트롤 드래그인지 확인
-      const target = opt.target;
-      const isControlDrag = target && target.__corner; // __corner는 컨트롤 드래그 시 설정됨
-
-      if (
-        activeObject &&
-        !activeObject.isControlPoint &&
-        !activeObject.frontShape &&
-        !isControlDrag // 컨트롤 드래그가 아닌 경우에만 드래그 허용
-      ) {
-        lastMouseX = evt.clientX;
-        lastMouseY = evt.clientY;
-        const hasControlPoints = checkObjectsForControlPoints([activeObject]);
-        const isAllSelected =
-          fabricCanvas
-            .getObjects()
-            .filter((obj) => !obj.isControlPoint && !obj.frontShape).length ===
-          1;
-        // hasControlPoints가 있고 전체 선택이 아니면 드래그 비활성화
-        if (!(hasControlPoints && !isAllSelected)) {
-          isDraggingObject = true;
-        }
-      }
-
-      if (fabricCanvas.isHandleMode) {
+      if (!isDragging && fabricCanvas.isHandleMode) {
         isDragging = true;
-        lastPosX = evt.clientX;
-        lastPosY = evt.clientY;
+        lastPosX = opt.e.clientX;
+        lastPosY = opt.e.clientY;
         fabricCanvas.defaultCursor = "grabbing";
-      } else if (fabricCanvas.isCuttingMode) {
-        isDragging = true;
-        startX = (pointer.x * zoom - vpt[4]) / zoom;
-        startY = (pointer.y * zoom - vpt[5]) / zoom;
-        cuttingRect = new fabric.Rect({
-          left: startX,
-          top: startY,
-          width: 0,
-          height: 0,
-          fill: "transparent",
-          stroke: "red",
-          strokeWidth: 1,
-          selectable: false,
-          evented: false,
-          excludeFromExport: true,
-        });
-        fabricCanvas.add(cuttingRect);
       }
     });
+
+    const exitEditingMode = (target) => {
+      if (target && target.isEditing) {
+        target.exitEditMode();
+      }
+    };
 
     fabricCanvas.on("mouse:move", (opt) => {
       const evt = opt.e;
       const pointer = fabricCanvas.getPointer(evt);
-
       if (isDragging && fabricCanvas.isHandleMode) {
         const vpt = fabricCanvas.viewportTransform;
         vpt[4] += evt.clientX - lastPosX;
@@ -310,7 +226,14 @@ async function canvas() {
       }
     });
 
-    fabricCanvas.on("mouse:up", async () => {
+    fabricCanvas.on("mouse:up", async (opt) => {
+      if (opt.e.button === 2) {
+        const pointer = fabricCanvas.getPointer(opt.e);
+        const activeObject = fabricCanvas.getActiveObject();
+        opt.e.preventDefault();
+        openMenu(opt, fabricCanvas);
+      }
+
       if (isDragging && fabricCanvas.isHandleMode) {
         isDragging = false;
         fabricCanvas.defaultCursor = "grab";
@@ -340,16 +263,16 @@ async function canvas() {
         fabricCanvas.originalH = rect.height;
         fabricCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
 
-        const img = await fabric.FabricImage.fromURL(dataUrl)
-          img.set({ scaleX: 1, scaleY: 1, left: 0, top: 0 });
-          fabricCanvas.backgroundImage = img;
+        const img = await fabric.FabricImage.fromURL(dataUrl);
+        img.set({ scaleX: 1, scaleY: 1, left: 0, top: 0 });
+        fabricCanvas.backgroundImage = img;
 
-          fabricCanvas.getObjects().forEach((obj) => {
-            fabricCanvas.remove(obj);
-          });
+        fabricCanvas.getObjects().forEach((obj) => {
+          fabricCanvas.remove(obj);
+        });
 
-          fabricCanvas.fire("object:modified");
-          fabricCanvas.renderAll();
+        fabricCanvas.fire("object:modified");
+        fabricCanvas.renderAll();
 
         fabricCanvas.remove(cuttingRect);
         cuttingRect = null;
@@ -361,18 +284,11 @@ async function canvas() {
 
       guideLines.forEach((line) => fabricCanvas.remove(line));
       guideLines = [];
-      // ensureFrontShapeVisibility(fabricCanvas);
       fabricCanvas.renderAll();
-    });
-
-    fabricCanvas.on("mouse:over", (e) => {
-      if (e.target?.isControlPoint) fabricCanvas.bringObjectToFront(e.target);
     });
 
     fabricCanvas.on("object:added", (e) => {
       const obj = e.target;
-      if (obj.frontShape || obj.isControlPoint) return;
-
       if (obj.isDelete) {
         obj.label = "삭제영역";
         fabricCanvas.fire("modified");
@@ -380,212 +296,26 @@ async function canvas() {
 
       if (!obj.label || obj.label === "") {
         assignObjectLabel(fabricCanvas, obj);
+        fabricCanvas.fire("modified");
       }
     });
 
     fabricCanvas.on("object:removed", (e) => {
       const obj = e.target;
-      cleanupObject(fabricCanvas, obj);
-    });
-
-    fabricCanvas.on("object:scaling", (e) => {
-      const obj = e.target;
-      if (obj.isControlPoint || obj.frontShape) return;
-
-      if (
-        obj instanceof fabric.ActiveSelection ||
-        obj instanceof fabric.Group
-      ) {
-        processWeatherFronts(obj._objects, fabricCanvas, 0, 0, true);
-      } else if (obj.pathType === "weatherFront") {
-        if (obj.shapeObjects) {
-          obj.shapeObjects.forEach((shape) => {
-            if (shape._objects) {
-              shape._objects.forEach((subObj) => {
-                fabricCanvas.remove(subObj);
-              });
-            }
-            fabricCanvas.remove(shape);
-          });
-          obj.shapeObjects = [];
-        }
-      }
-      fabricCanvas.renderAll();
     });
 
     fabricCanvas.on("selection:created", (e) => {
-      const activeObject = fabricCanvas.getActiveObject();
-
-      if (
-        (activeObject instanceof fabric.ActiveSelection ||
-          activeObject instanceof fabric.Group) &&
-        activeObject._objects
-      ) {
-        prevPosition = { left: activeObject.left, top: activeObject.top };
-        activeObject.setCoords();
-        processWeatherFronts(activeObject._objects, fabricCanvas);
-        const isAllSelected =
-          activeObject._objects.length ===
-          fabricCanvas
-            .getObjects()
-            .filter((obj) => !obj.isControlPoint && !obj.frontShape).length;
-        const hasControlPoints = checkObjectsForControlPoints(
-          activeObject._objects
-        );
-        if (hasControlPoints && !isAllSelected) {
-          activeObject.set({
-            hasControls: true,
-            lockRotation: true,
-            // lockScalingX: true,
-            // lockScalingY: true,
-            hoverCursor: "move",
-            evented: true,
-          });
-        } else {
-          activeObject.set({
-            hasControls: true,
-            lockRotation: hasControlPoints,
-            // lockScalingX: hasControlPoints,
-            // lockScalingY: hasControlPoints,
-            hoverCursor: "move",
-            selectable: true,
-            evented: true,
-          });
-        }
-      } else if (
-        activeObject &&
-        !activeObject.isControlPoint &&
-        !activeObject.frontShape
-      ) {
-        const isAllSelected =
-          fabricCanvas
-            .getObjects()
-            .filter((obj) => !obj.isControlPoint && !obj.frontShape).length ===
-          1;
-        const hasControlPoints = checkObjectsForControlPoints([activeObject]);
-        if (hasControlPoints && !isAllSelected) {
-          activeObject.set({
-            lockRotation: true,
-            // lockScalingX: true,
-            // lockScalingY: true,
-            hoverCursor: "move",
-            evented: true,
-          });
-        } else {
-          activeObject.set({
-            hasControls: true,
-            lockRotation: hasControlPoints,
-            // lockScalingX: hasControlPoints,
-            // lockScalingY: hasControlPoints,
-            hoverCursor: "move",
-            selectable: true,
-            evented: true,
-          });
-        }
-        this.setActiveSelection(activeObject);
-      }
-
-      const remainingFrontShapes = fabricCanvas
-        .getObjects()
-        .filter((o) => o.frontShape);
-      if (remainingFrontShapes.length > 0) {
-        const fronts = collectWeatherFronts(fabricCanvas.getObjects());
-        remainingFrontShapes.forEach((shape) => {
-          const hasMatchingShape = fronts.some((front) =>
-            front.shapeObjects?.includes(shape)
-          );
-          if (!hasMatchingShape) {
-            if (shape._objects) {
-              shape._objects.forEach((subObj) => {
-                fabricCanvas.remove(subObj);
-              });
-            }
-            fabricCanvas.remove(shape);
-          }
-        });
-      }
-
       syncSelectionSettingPanel(e);
       this.setActiveTool("select");
     });
 
     fabricCanvas.on("selection:updated", (e) => {
-      const activeObject = fabricCanvas.getActiveObject();
-      const allControlPoints = getControlPoint();
-      if (fabricCanvas.getActiveObjects().length > 1) {
-        allControlPoints.forEach((point) => point.set({ visible: false }));
-      }
-
-      if (
-        (activeObject instanceof fabric.ActiveSelection ||
-          activeObject instanceof fabric.Group) &&
-        activeObject._objects
-      ) {
-        prevPosition = { left: activeObject.left, top: activeObject.top };
-        activeObject.setCoords();
-        processWeatherFronts(activeObject._objects, fabricCanvas);
-        const isAllSelected =
-          activeObject._objects.length ===
-          fabricCanvas
-            .getObjects()
-            .filter((obj) => !obj.isControlPoint && !obj.frontShape).length;
-        const hasControlPoints = checkObjectsForControlPoints(
-          activeObject._objects
-        );
-        if (hasControlPoints && !isAllSelected) {
-          activeObject.set({
-            hasControls: true,
-            lockRotation: true,
-            // lockScalingX: true,
-            // lockScalingY: true,
-            hoverCursor: "move",
-            evented: true,
-          });
-        } else {
-          activeObject.set({
-            hasControls: true,
-            lockRotation: hasControlPoints,
-            // lockScalingX: hasControlPoints,
-            // lockScalingY: hasControlPoints,
-            hoverCursor: "move",
-            selectable: true,
-            evented: true,
-          });
-        }
-      } else if (
-        activeObject &&
-        !activeObject.isControlPoint &&
-        !activeObject.frontShape
-      ) {
-        const isAllSelected =
-          fabricCanvas
-            .getObjects()
-            .filter((obj) => !obj.isControlPoint && !obj.frontShape).length ===
-          1;
-        const hasControlPoints = checkObjectsForControlPoints([activeObject]);
-        if (hasControlPoints && !isAllSelected) {
-          activeObject.set({
-            lockRotation: true,
-            // lockScalingX: true,
-            // lockScalingY: true,
-            hoverCursor: "move",
-            evented: true,
-          });
-        } else {
-          activeObject.set({
-            hasControls: true,
-            lockRotation: hasControlPoints,
-            // lockScalingX: hasControlPoints,
-            // lockScalingY: hasControlPoints,
-            hoverCursor: "move",
-            selectable: true,
-            evented: true,
-          });
-        }
-        this.setActiveSelection(activeObject);
-      }
-
       syncSelectionSettingPanel(e);
+      if (e.deselected) e.deselected.forEach(exitEditingMode);
+    });
+
+    fabricCanvas.on("selection:cleared", (e) => {
+      if (e.deselected) e.deselected.forEach(exitEditingMode);
     });
 
     fabricCanvas.on("object:rotating", (e) => {
@@ -594,79 +324,23 @@ async function canvas() {
 
     fabricCanvas.on("object:moving", (e) => {
       const obj = e.target;
-      if (obj.isControlPoint || obj.frontShape) return;
-
       manageGuideLines(fabricCanvas, obj, guideLines);
-
-      let deltaX = 0;
-      let deltaY = 0;
-      if (isDraggingObject && lastMouseX !== null && lastMouseY !== null) {
-        const currentMouseX = e.e.clientX;
-        const currentMouseY = e.e.clientY;
-        deltaX = (currentMouseX - lastMouseX) / fabricCanvas.getZoom();
-        deltaY = (currentMouseY - lastMouseY) / fabricCanvas.getZoom();
-        lastMouseX = currentMouseX;
-        lastMouseY = currentMouseY;
-      }
-
-      if (
-        obj instanceof fabric.ActiveSelection ||
-        obj instanceof fabric.Group
-      ) {
-        processWeatherFronts(obj._objects, fabricCanvas, deltaX, deltaY);
-      }
-
       fabricCanvas.renderAll();
     });
 
     fabricCanvas.on("object:modified", (e) => {
-      const activeObject = fabricCanvas.getActiveObject();
-      if (
-        (activeObject instanceof fabric.ActiveSelection ||
-          activeObject instanceof fabric.Group) &&
-        activeObject._objects
-      ) {
-        const currentPosition = {
-          left: activeObject.left,
-          top: activeObject.top,
-        };
-        const deltaX = currentPosition.left - prevPosition.left;
-        const deltaY = currentPosition.top - prevPosition.top;
-
-        const groupTransform = activeObject.calcTransformMatrix();
-        processObjects(activeObject._objects, fabricCanvas, deltaX, deltaY);
-        // activeObject._objects.forEach((obj) => {
-        //   if (
-        //     obj.pathType === "weatherFront" &&
-        //     (obj.scaleX !== 1 || obj.scaleY !== 1)
-        //   ) {
-        //     if (obj.shapeObjects) {
-        //       obj.shapeObjects.forEach((shape) => fabricCanvas.remove(shape));
-        //       obj.shapeObjects = [];
-        //     }
-        //     applyWeatherFrontScaling(obj, fabricCanvas, groupTransform);
-        //   }
-        // });
-        prevPosition = { left: currentPosition.left, top: currentPosition.top };
-      }
-
-      fabricCanvas
-        .getObjects()
-        .filter((obj) => obj.noFocusing)
-        .forEach((obj) => {
-          obj.selectable = false;
-          obj.evented = false;
-          obj.noFocusing = true;
-        });
-
       if (this.history.getValues().redo.length > 0) {
+        this.history.push(
+          this.history.getValues().redo[
+            this.history.getValues().redo.length - 1
+          ]
+        );
         this.history.clearRedo();
       }
       saveCanvasState(fabricCanvas, this.history);
       fabricCanvas.renderAll();
     });
 
-    // 캔버스 초기화 및 저장된 데이터 로드
     const savedCanvas = load("canvasEditor");
     if (savedCanvas) {
       try {
@@ -717,15 +391,17 @@ async function canvas() {
             heightInput.value = Math.round(canvasHeight);
           }
 
-          await fabricCanvas.loadFromJSON(parsedData,async  () => {
+          await fabricCanvas.loadFromJSON(parsedData, async () => {
             if (parsedData.backgroundImage?.src) {
-              const img = await fabric.FabricImage.fromURL(parsedData.backgroundImage.src);
+              const img = await fabric.FabricImage.fromURL(
+                parsedData.backgroundImage.src
+              );
               img.set({
-                    scaleX: scaleX,
-                    scaleY: scaleY,
-                    left: 0,
-                    top: 0,
-              })
+                scaleX: scaleX,
+                scaleY: scaleY,
+                left: 0,
+                top: 0,
+              });
               fabricCanvas.backgroundImage = img;
               imgEditor.applyZoom(zoomLevel);
             }
@@ -745,9 +421,7 @@ async function canvas() {
           obj.selectable = false;
           obj.evented = false;
         }
-        restoreControlPoints(fabricCanvas, obj);
       });
-      processWeatherFronts(fabricCanvas.getObjects(), fabricCanvas);
       saveCanvasState(fabricCanvas, this.history);
     }, 100);
 
@@ -783,28 +457,28 @@ async function canvas() {
   }
 
   function assignObjectLabel(fabricCanvas, obj) {
+    if (obj.noFocusing) return;
     let labelPrefix = "도형";
     let desc = obj.desc || obj.type || "unknown";
 
-    if (desc === "textbox") labelPrefix = "텍스트";
+    if (desc === "ctextbox") labelPrefix = "텍스트";
     else if (desc === "polygon") labelPrefix = "도형";
+    else if (desc === "ellipse") labelPrefix = "원";
+    else if (desc === "triangle") labelPrefix = "삼각형";
+    else if (desc === "rect") labelPrefix = "사각형";
     else if (desc === "image") labelPrefix = "이미지";
     else if (desc === "group") labelPrefix = "그룹";
-    else if (desc === "path") {
-      if (obj.pathType === "polygon") labelPrefix = "다각형";
-      else if (obj.pathType === "arrow") labelPrefix = "화살표";
-      else if (obj.pathType === "line") labelPrefix = "선";
-      else labelPrefix = "도형";
-    }
+    else if (desc === "curvedline") labelPrefix = "곡선";
+    else if (desc === "arrow") labelPrefix = "화살표";
+    else if (desc === "polypath") labelPrefix = "다각형";
+    else if (desc === "weatherfrontline") labelPrefix = "날씨전선";
 
     const sameObjects = fabricCanvas
       .getObjects()
       .filter(
         (o) =>
           o.label &&
-          (o.label.startsWith(desc) || o.label.startsWith(labelPrefix)) &&
-          !o.frontShape &&
-          !o.isControlPoint
+          (o.label.startsWith(desc) || o.label.startsWith(labelPrefix))
       );
 
     const usedNumbers = sameObjects
@@ -828,64 +502,6 @@ async function canvas() {
       ? `${labelPrefix} ${nextNumber}`
       : desc;
     obj.set({ label });
-  }
-
-  function cleanupObject(fabricCanvas, obj) {
-    if (!fabricCanvas || !obj || obj.isControlPoint || obj.noFocusing) return;
-
-    if (obj.controlPoints) {
-      obj.controlPoints.forEach((point) => {
-        fabricCanvas.remove(point);
-      });
-      obj.controlPoints = [];
-    }
-
-    if (obj.shapeObjects) {
-      obj.shapeObjects.forEach((shape) => {
-        if (shape._objects) {
-          shape._objects.forEach((subObj) => {
-            fabricCanvas.remove(subObj);
-          });
-        }
-        fabricCanvas.remove(shape);
-      });
-      obj.shapeObjects = [];
-    }
-
-    const remainingFrontShapes = fabricCanvas
-      .getObjects()
-      .filter((o) => o.frontShape);
-    if (remainingFrontShapes.length > 0) {
-      const fronts = collectWeatherFronts(fabricCanvas.getObjects());
-      remainingFrontShapes.forEach((shape) => {
-        const hasMatchingShape = fronts.some((front) =>
-          front.shapeObjects?.includes(shape)
-        );
-        if (!hasMatchingShape) {
-          if (shape._objects) {
-            shape._objects.forEach((subObj) => {
-              fabricCanvas.remove(subObj);
-            });
-          }
-          fabricCanvas.remove(shape);
-        }
-      });
-    }
-
-    fabricCanvas.discardActiveObject();
-  }
-
-  function collectWeatherFronts(objects) {
-    let fronts = [];
-    objects.forEach((o) => {
-      if (o.pathType === "weatherFront") {
-        fronts.push(o);
-      }
-      if (o.type === "group" && o._objects) {
-        fronts = fronts.concat(collectWeatherFronts(o._objects));
-      }
-    });
-    return fronts;
   }
 
   function manageGuideLines(fabricCanvas, obj, guideLines) {
@@ -931,17 +547,7 @@ async function canvas() {
         })
       );
     }
-
     guideLines.forEach((line) => fabricCanvas.add(line));
-  }
-
-  function ensureFrontShapeVisibility(fabricCanvas) {
-    fabricCanvas
-      .getObjects()
-      .filter((obj) => obj.frontShape)
-      .forEach((obj) => {
-        obj.visible = true;
-      });
   }
 
   function saveCanvasState(fabricCanvas, history) {
@@ -949,16 +555,12 @@ async function canvas() {
       return;
     }
     const canvasJSON = canvasToJsonData(fabricCanvas);
-    canvasJSON.objects = canvasJSON.objects.filter(
-      (obj) => !obj.isControlPoint && !obj.frontShape
-    );
     canvasJSON.viewportTransform = fabricCanvas.viewportTransform;
     canvasJSON.width = fabricCanvas.getWidth();
     canvasJSON.height = fabricCanvas.getHeight();
 
     const serializedData = JSON.stringify(canvasJSON);
     history.push(serializedData);
-    console.log(history.getValues());
   }
 
   function handleKeydownEvents(e, fabricCanvas, context) {
@@ -968,41 +570,13 @@ async function canvas() {
       !document.querySelector("textarea:focus, input:focus")
     ) {
       e.preventDefault();
-      const objects = getFilteredFocusObjects().filter(
-        (obj) => !obj.isControlPoint && !obj.frontShape && obj.visible
-      );
-
-      if (objects.length === 1) {
-        fabricCanvas.setActiveObject(objects[0]);
-      } else if (
-        objects.length > 1 &&
-        objects.length !== fabricCanvas.getActiveObjects().length
-      ) {
-        fabricCanvas.discardActiveObject();
-        const selection = new fabric.ActiveSelection(objects, {
-          canvas: fabricCanvas,
-        });
-        // 전체 선택 시 이동 가능하도록 설정
-        selection.set({
-          hasControls: true,
-          lockRotation: checkObjectsForControlPoints(objects),
-          // lockScalingX: checkObjectsForControlPoints(objects),
-          // lockScalingY: checkObjectsForControlPoints(objects),
-          hoverCursor: "move",
-          selectable: true,
-          evented: true,
-        });
-        fabricCanvas.setActiveObject(selection);
-        fabricCanvas.renderAll();
-      }
+      selectAllObjects(fabricCanvas);
     }
 
     if (e.ctrlKey && e.key.toLowerCase() === "s") {
       e.preventDefault();
       const canvasJsonData = canvasToJsonData(fabricCanvas);
-      canvasJsonData.objects = canvasJsonData.objects.filter(
-        (obj) => !obj.isControlPoint && !obj.frontShape
-      );
+      canvasJsonData.objects = canvasJsonData.objects;
       canvasJsonData.viewportTransform = fabricCanvas.viewportTransform;
       canvasJsonData.width = fabricCanvas.getWidth();
       canvasJsonData.height = fabricCanvas.getHeight();
@@ -1034,14 +608,8 @@ async function canvas() {
     }
 
     if (key === 46) {
-      if (fabricCanvas.getActiveObjects().length > 0) {
-        e.preventDefault();
-        const activeObjects = fabricCanvas.getActiveObjects();
-        fabricCanvas.discardActiveObject();
-        activeObjects.forEach((obj) => fabricCanvas.remove(obj));
-        fabricCanvas.renderAll();
-        fabricCanvas.fire("object:modified");
-      }
+      e.preventDefault();
+      removeObjects(fabricCanvas);
     }
 
     if (e.altKey) {
@@ -1057,155 +625,4 @@ async function canvas() {
   }
 }
 
-function processObjects(objects, fabricCanvas, dx = 0, dy = 0) {
-  const objectArray = Array.isArray(objects) ? objects : [objects];
-
-  objectArray.forEach((obj) => {
-    if (!obj) {
-      console.error("Invalid object:", obj);
-      return;
-    }
-
-    if (obj.type === "group" && obj._objects) {
-      processObjects(obj._objects, fabricCanvas, dx, dy);
-    } else {
-      updateObjectCoordinates(obj, fabricCanvas, dx, dy);
-    }
-  });
-}
-
-function updateObjectCoordinates(obj, fabricCanvas, dx, dy) {
-  if (obj.isControlPoint || obj.frontShape) return;
-
-  if (obj.type === "path") {
-    if (obj.pathType === "line" || obj.pathType === "arrow") {
-      const startPoint = obj.p0
-        ? { x: obj.p0.left + dx + 7.5, y: obj.p0.top + dy + 7.5 }
-        : null;
-      const endPoint = obj.p2
-        ? { x: obj.p2.left + dx + 7.5, y: obj.p2.top + dy + 7.5 }
-        : null;
-      const midPoint = obj.p1
-        ? { x: obj.p1.left + dx + 7.5, y: obj.p1.top + dy + 7.5 }
-        : null;
-
-      if (obj.p0) fabricCanvas.remove(obj.p0);
-      if (obj.p1) fabricCanvas.remove(obj.p1);
-      if (obj.p2) fabricCanvas.remove(obj.p2);
-
-      const attachControlPointsFunc =
-        obj.pathType === "line"
-          ? attachLineControlPoints
-          : attachArrowControlPoints;
-      attachControlPointsFunc(
-        fabricCanvas,
-        obj,
-        startPoint,
-        endPoint,
-        midPoint,
-        0,
-        0
-      );
-
-      const updateControlPointsFunc =
-        obj.pathType === "line"
-          ? updateLineControlPoints
-          : updateArrowControlPoints;
-      updateControlPointsFunc(obj);
-    } else if (obj.pathType === "polygon") {
-      obj.path.forEach((segment) => {
-        if (segment[0] === "M" || segment[0] === "L") {
-          segment[1] += dx;
-          segment[2] += dy;
-        } else if (segment[0] === "Q") {
-          segment[1] += dx;
-          segment[2] += dy;
-          segment[3] += dx;
-          segment[4] += dy;
-        }
-      });
-      obj.pathOffset.x += dx;
-      obj.pathOffset.y += dy;
-
-      attachPathControlPoints(fabricCanvas, obj);
-    } else if (obj.pathType === "weatherFront") {
-      obj.path.forEach((segment) => {
-        if (segment[0] === "M" || segment[0] === "L") {
-          segment[1] += dx;
-          segment[2] += dy;
-        } else if (segment[0] === "Q") {
-          segment[1] += dx;
-          segment[2] += dy;
-          segment[3] += dx;
-          segment[4] += dy;
-        }
-      });
-      obj.pathOffset.x += dx;
-      obj.pathOffset.y += dy;
-      attachWeatherFrontControlPoints(fabricCanvas, obj);
-      generateWeatherFrontPath(obj, fabricCanvas);
-    }
-  }
-}
-
-function processWeatherFronts(
-  objects,
-  fabricCanvas,
-  deltaX = 0,
-  deltaY = 0,
-  removeOnly = false
-) {
-  objects.forEach((obj) => {
-    if (obj.type === "group" && obj._objects) {
-      processWeatherFronts(
-        obj._objects,
-        fabricCanvas,
-        deltaX,
-        deltaY,
-        removeOnly
-      );
-    } else if (obj.pathType === "weatherFront") {
-      if (obj.shapeObjects) {
-        if (removeOnly) {
-          obj.isScaledInGroup = true;
-          obj.shapeObjects.forEach((shape) => {
-            if (shape._objects) {
-              shape._objects.forEach((subObj) => {
-                fabricCanvas.remove(subObj);
-              });
-            }
-            fabricCanvas.remove(shape);
-          });
-          obj.shapeObjects = [];
-        } else if (obj.pathType === "weatherFront") {
-          if (obj.shapeObjects && (deltaX !== 0 || deltaY !== 0)) {
-            obj.shapeObjects.forEach((shape) => {
-              shape.set({
-                left: shape.left + deltaX,
-                top: shape.top + deltaY,
-              });
-              shape.setCoords();
-            });
-          } else {
-            generateWeatherFrontPath(obj, fabricCanvas);
-          }
-        }
-      }
-    }
-  });
-}
-
-function checkObjectsForControlPoints(objects) {
-  return objects.some((obj) => {
-    if (obj.type === "group" && obj._objects) {
-      return checkObjectsForControlPoints(obj._objects);
-    }
-    if (obj.pathType) {
-      return true;
-    } else {
-      return false;
-    }
-  });
-}
-
-export { canvas, processWeatherFronts, processObjects };
+export { canvas };
