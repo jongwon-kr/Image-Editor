@@ -13,9 +13,14 @@ import {
   WeatherFrontLineColor,
   WeatherFrontLineType,
 } from "../utils/constants.ts";
-import { generateUniqueId } from "../utils/drawingUtils.ts";
+import {
+  generateUniqueId,
+  initializeColorPicker,
+  initializeEyedropper,
+} from "../utils/drawingUtils.ts";
 import { Duplicate, Paste } from "../utils/copyPaste.js";
-import { ICONS } from "../models/featIcons.ts";
+import { ICONS } from "../models/Icons.ts";
+import { startPicker } from "../utils/eyeDropper.ts";
 
 ("use strict");
 
@@ -116,42 +121,16 @@ function selectionSettings() {
   }
   mainPanel.insertAdjacentHTML(
     "beforeend",
-    `<div class="toolpanel" id="select-panel"><div class="content"><p class="title">선택 영역 설정</p></div></div>`
+    `
+      <canvas id="canvas" style="display: none;"></canvas>
+      <p id="hexValue" style="display: none;"></p>
+      <div class="toolpanel" id="select-panel"><div class="content"><p class="title">선택 영역 설정</p></div></div>
+    `
   );
 
   if (!this.canvas) {
     console.error("Canvas is not initialized");
     return;
-  }
-
-  function initializeColorPickerWithEyedropper(pickerElement, onColorChange) {
-    const spectrumOptions = {
-      showButtons: false,
-      type: "color",
-      showInput: true,
-      allowEmpty: true,
-      move: onColorChange,
-    };
-
-    pickerElement.spectrum(spectrumOptions);
-
-    if (window.EyeDropper) {
-      const eyedropperBtn = document.createElement("button");
-      eyedropperBtn.className = "eyedropper-btn";
-      eyedropperBtn.innerHTML = ICONS.eyeDrop;
-      pickerElement.parent().append(eyedropperBtn);
-
-      eyedropperBtn.addEventListener("click", async () => {
-        try {
-          const eyeDropper = new EyeDropper();
-          const result = await eyeDropper.open();
-          pickerElement.spectrum("set", result.sRGBHex);
-          onColorChange(tinycolor(result.sRGBHex));
-        } catch (e) {
-          console.log("Color selection cancelled.");
-        }
-      });
-    }
   }
 
   (() => {
@@ -432,7 +411,7 @@ function selectionSettings() {
     const colorPicker = $(
       `${_self.containerSelector} .toolpanel#select-panel .color #color-picker`
     );
-    initializeColorPickerWithEyedropper(colorPicker, function (color) {
+    initializeColorPicker(colorPicker, function (color) {
       if (!_self.activeSelection || _self.activeSelection.type !== "ctextbox")
         return;
       let hex = color.toRgbString();
@@ -440,6 +419,18 @@ function selectionSettings() {
       _self.canvas.fire("object:modified");
       _self.canvas.renderAll();
       syncPanelWithSelection(_self);
+    });
+    initializeEyedropper(colorPicker, function () {
+      startPicker((selectedColor) => {
+        colorPicker.spectrum("set", selectedColor);
+
+        _self.canvas.getActiveObjects().forEach((obj) => {
+          obj.set("fill", selectedColor);
+
+          _self.canvas.fire("object:modified");
+          _self.canvas.renderAll();
+        });
+      });
     });
 
     const borderWidthInput = document.querySelector(
@@ -491,7 +482,7 @@ function selectionSettings() {
     const borderColorPicker = $(
       `${_self.containerSelector} .toolpanel#select-panel .border-settings #border-color-picker`
     );
-    initializeColorPickerWithEyedropper(borderColorPicker, function (color) {
+    initializeColorPicker(borderColorPicker, function (color) {
       if (!_self.activeSelection || _self.activeSelection.type !== "ctextbox")
         return;
       let hex = color.toRgbString();
@@ -499,6 +490,18 @@ function selectionSettings() {
       _self.canvas.fire("object:modified");
       _self.canvas.renderAll();
       syncPanelWithSelection(_self);
+    });
+    initializeEyedropper(borderColorPicker, function () {
+      startPicker((selectedColor) => {
+        borderColorPicker.spectrum("set", selectedColor);
+
+        _self.canvas.getActiveObjects().forEach((obj) => {
+          obj.set("stroke", selectedColor);
+
+          _self.canvas.fire("object:modified");
+          _self.canvas.renderAll();
+        });
+      });
     });
 
     const textBorderWidthNumberInput = document.querySelector(
@@ -550,18 +553,27 @@ function selectionSettings() {
       syncPanelWithSelection(_self);
     });
 
-    initializeColorPickerWithEyedropper(
-      textboxBorderColorPicker,
-      function (color) {
-        if (!_self.activeSelection || _self.activeSelection.type !== "ctextbox")
-          return;
-        let hex = color ? color.toRgbString() : "transparent";
-        _self.activeSelection.set("textboxBorderColor", hex);
-        _self.canvas.fire("object:modified");
-        _self.canvas.renderAll();
-        syncPanelWithSelection(_self);
-      }
-    );
+    initializeColorPicker(textboxBorderColorPicker, function (color) {
+      if (!_self.activeSelection || _self.activeSelection.type !== "ctextbox")
+        return;
+      let hex = color ? color.toRgbString() : "transparent";
+      _self.activeSelection.set("textboxBorderColor", hex);
+      _self.canvas.fire("object:modified");
+      _self.canvas.renderAll();
+      syncPanelWithSelection(_self);
+    });
+    initializeEyedropper(textboxBorderColorPicker, function () {
+      startPicker((selectedColor) => {
+        textboxBorderColorPicker.spectrum("set", selectedColor);
+
+        _self.canvas.getActiveObjects().forEach((obj) => {
+          obj.set("textboxBorderColor", selectedColor);
+
+          _self.canvas.fire("object:modified");
+          _self.canvas.renderAll();
+        });
+      });
+    });
 
     const textboxBorderNumberInput = textboxBorderWidthInput.closest(
       ".custom-number-input"
@@ -616,7 +628,7 @@ function selectionSettings() {
     const colorPicker = $(
       `${this.containerSelector} .toolpanel#select-panel .textbox-section #color-picker`
     );
-    initializeColorPickerWithEyedropper(colorPicker, function (color) {
+    initializeColorPicker(colorPicker, function (color) {
       let hex = color ? color.toRgbString() : "transparent";
       _self.canvas
         .getActiveObjects()
@@ -624,6 +636,18 @@ function selectionSettings() {
       _self.canvas.fire("object:modified");
       _self.canvas.renderAll();
       syncPanelWithSelection(_self);
+    });
+    initializeEyedropper(colorPicker, function () {
+      startPicker((selectedColor) => {
+        colorPicker.spectrum("set", selectedColor);
+
+        _self.canvas.getActiveObjects().forEach((obj) => {
+          obj.set("backgroundColor", selectedColor);
+
+          _self.canvas.fire("object:modified");
+          _self.canvas.renderAll();
+        });
+      });
     });
   })();
 
@@ -777,7 +801,7 @@ function selectionSettings() {
     const colorPicker = $(
       `${_self.containerSelector} .toolpanel#select-panel .border-section #color-picker`
     );
-    initializeColorPickerWithEyedropper(colorPicker, function (color) {
+    initializeColorPicker(colorPicker, function (color) {
       if (
         !_self.activeSelection ||
         !borderSectionTypeList.includes(_self.activeSelection.type)
@@ -789,11 +813,23 @@ function selectionSettings() {
       _self.canvas.renderAll();
       syncPanelWithSelection(_self);
     });
+    initializeEyedropper(colorPicker, function () {
+      startPicker((selectedColor) => {
+        colorPicker.spectrum("set", selectedColor);
+
+        _self.canvas.getActiveObjects().forEach((obj) => {
+          obj.set("stroke", selectedColor);
+
+          _self.canvas.fire("object:modified");
+          _self.canvas.renderAll();
+        });
+      });
+    });
 
     const neonColorPicker = $(
       `${_self.containerSelector} .toolpanel#select-panel .border-section #neon-color-picker`
     );
-    initializeColorPickerWithEyedropper(neonColorPicker, function (color) {
+    initializeColorPicker(neonColorPicker, function (color) {
       if (
         !_self.activeSelection ||
         !borderSectionTypeList.includes(_self.activeSelection.type)
@@ -812,6 +848,27 @@ function selectionSettings() {
       _self.canvas.fire("object:modified");
       _self.canvas.renderAll();
       syncPanelWithSelection(_self);
+    });
+
+    initializeEyedropper(neonColorPicker, function () {
+      startPicker((selectedColor) => {
+        neonColorPicker.spectrum("set", selectedColor);
+
+        _self.canvas.getActiveObjects().forEach((obj) => {
+          obj.set({
+            shadow: new fabric.Shadow({
+              color: selectedColor,
+              blur: 10,
+              offsetX: 0,
+              offsetY: 0,
+              affectStroke: true,
+            }),
+          });
+        });
+
+        _self.canvas.fire("object:modified");
+        _self.canvas.renderAll();
+      });
     });
 
     const borderWidthInput = document.querySelector(
@@ -1015,7 +1072,8 @@ function selectionSettings() {
       `
         <div class="fill-section">
           <h4>배경</h4>
-          <div class="input-container"><label>색상</label>
+          <div class="input-container">
+            <label>색상</label>
             <input id="color-picker" value="transparent">
           </div>
           <div class="horizontal-line"></div>
@@ -1026,121 +1084,28 @@ function selectionSettings() {
     const colorPicker = $(
       `${this.containerSelector} .toolpanel#select-panel .fill-section #color-picker`
     );
-    const spectrumOptionsWithPalette = {
-      showButtons: false,
-      type: "color",
-      showInput: true,
-      allowEmpty: true,
-      palette: [
-        [
-          "#000000",
-          "#444444",
-          "#5b5b5b",
-          "#999999",
-          "#bcbcbc",
-          "#eeeeee",
-          "#f3f6f4",
-          "#ffffff",
-        ],
-        [
-          "#f44336",
-          "#744700",
-          "#ce7e00",
-          "#8fce00",
-          "#2986cc",
-          "#16537e",
-          "#6a329f",
-          "#c90076",
-        ],
-        [
-          "#f4cccc",
-          "#fce5cd",
-          "#fff2cc",
-          "#d9ead3",
-          "#d0e0e3",
-          "#cfe2f3",
-          "#d9d2e9",
-          "#ead1dc",
-        ],
-        [
-          "#ea9999",
-          "#f9cb9c",
-          "#ffe599",
-          "#b6d7a8",
-          "#a2c4c9",
-          "#9fc5e8",
-          "#b4a7d6",
-          "#d5a6bd",
-        ],
-        [
-          "#e06666",
-          "#f6b26b",
-          "#ffd966",
-          "#93c47d",
-          "#76a5af",
-          "#6fa8dc",
-          "#8e7cc3",
-          "#c27ba0",
-        ],
-        [
-          "#cc0000",
-          "#e69138",
-          "#f1c232",
-          "#6aa84f",
-          "#45818e",
-          "#3d85c6",
-          "#674ea7",
-          "#a64d79",
-        ],
-        [
-          "#990000",
-          "#b45f06",
-          "#bf9000",
-          "#38761d",
-          "#134f5c",
-          "#0b5394",
-          "#351c75",
-          "#741b47",
-        ],
-        [
-          "#660000",
-          "#783f04",
-          "#7f6000",
-          "#274e13",
-          "#0c343d",
-          "#073763",
-          "#20124d",
-          "#4c1130",
-        ],
-        ["#ffdb23", "#ff9500", "#ff0100"],
-      ],
-      move: function (color) {
-        let hex = "transparent";
-        color && (hex = color.toRgbString());
-        _self.canvas.getActiveObjects().forEach((obj) => obj.set("fill", hex));
-        _self.canvas.fire("object:modified");
-        _self.canvas.renderAll();
-      },
-    };
-    colorPicker.spectrum(spectrumOptionsWithPalette);
 
-    if (window.EyeDropper) {
-      const eyedropperBtn = document.createElement("button");
-      eyedropperBtn.className = "eyedropper-btn";
-      eyedropperBtn.innerHTML = ICONS.eyeDrop;
-      colorPicker.parent().append(eyedropperBtn);
+    initializeColorPicker(colorPicker, function (color) {
+      if (!_self.activeSelection) return;
+      let hex = color.toRgbString();
+      _self.activeSelection.set("fill", hex);
+      _self.canvas.fire("object:modified");
+      _self.canvas.renderAll();
+      syncPanelWithSelection(_self);
+    });
 
-      eyedropperBtn.addEventListener("click", async () => {
-        try {
-          const eyeDropper = new EyeDropper();
-          const result = await eyeDropper.open();
-          colorPicker.spectrum("set", result.sRGBHex);
-          spectrumOptionsWithPalette.move(tinycolor(result.sRGBHex));
-        } catch (e) {
-          console.log("Color selection cancelled.");
-        }
+    initializeEyedropper(colorPicker, function () {
+      startPicker((selectedColor) => {
+        colorPicker.spectrum("set", selectedColor);
+
+        _self.canvas.getActiveObjects().forEach((obj) => {
+          obj.set("fill", selectedColor);
+
+          _self.canvas.fire("object:modified");
+          _self.canvas.renderAll();
+        });
       });
-    }
+    });
   })();
 
   (() => {

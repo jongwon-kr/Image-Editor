@@ -50,7 +50,7 @@ const buttons = [
   // "weatherData",
   "images",
   "templates",
-  // "background",
+  "background",
   // "fullscreen",
   // "help",
   "undo",

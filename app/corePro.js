@@ -18,12 +18,13 @@ import { zoom } from "./utils/zoom.js";
 import { templates } from "./ui/templates.js";
 import { fullscreen } from "./utils/fullScreen.js";
 import { layerListPanel } from "./ui/layerListPanel.js";
-import { getDeleteArea } from "./utils/utils.js";
 import { testPanel } from "./ui/testPanel.js";
 import { fetchEditData } from "./ui/EditRepository.js";
 import { ellipseDrawing } from "./drawing-tools/drawingEllipse.js";
 import { triangleDrawing } from "./drawing-tools/drawingTriangle.js";
 import { rectDrawing } from "./drawing-tools/drawingRect.js";
+import { ICONS } from "./models/Icons.ts";
+import { autoAlignment } from "./utils/autoAlignment.js";
 
 /**
  * @param {String} containerSelector jquery selector for image editor container
@@ -69,7 +70,7 @@ class ImageEditor {
       "visible",
       "overlayImage",
       "isReflect",
-      "isDelete",
+      "isFreeDrawn",
     ]);
     canvasJSON.viewportTransform = this.canvas.viewportTransform;
     canvasJSON.width = this.canvas.getWidth();
@@ -79,8 +80,12 @@ class ImageEditor {
 
   setCanvasJSON = async (current) => {
     if (!current) return;
+
     try {
       const parsedJSON = JSON.parse(current);
+      parsedJSON.viewportTransform = this.canvas.viewportTransform;
+      parsedJSON.width = this.canvas.getWidth();
+      parsedJSON.height = this.canvas.getHeight();
       await this.canvas.loadFromJSON(parsedJSON, async () => {
         if (parsedJSON.backgroundImage?.src) {
           const img = await fabric.FabricImage.fromURL(
@@ -101,6 +106,19 @@ class ImageEditor {
           obj.evented = false;
         }
       });
+      const viewportTransform = parsedJSON.viewportTransform || [
+        1, 0, 0, 1, 0, 0,
+      ];
+      const zoomLevel = viewportTransform[0] || 1;
+
+      const canvasWidth = parsedJSON.width;
+      const canvasHeight = parsedJSON.height;
+
+      this.canvas.originalW = canvasWidth / zoomLevel;
+      this.canvas.originalH = canvasHeight / zoomLevel;
+      this.canvas.setViewportTransform(viewportTransform);
+      this.applyZoom(zoomLevel);
+
       this.canvas.renderAll();
     } catch (error) {
       console.error("Failed to load canvas JSON:", error);
@@ -161,13 +179,10 @@ class ImageEditor {
     this.canvas.selection = true;
 
     this.canvas.forEachObject((o) => {
-      o.selectable = true;
-      o.evented = true;
-    });
-
-    getDeleteArea().forEach((o) => {
-      o.selectable = false;
-      o.evented = false;
+      if (!o.noFocusing) {
+        o.selectable = true;
+        o.evented = true;
+      }
     });
 
     if (id !== "draw" && this.cleanupDrawMode) {
@@ -177,6 +192,9 @@ class ImageEditor {
     switch (id) {
       case "select":
         this.canvas.defaultCursor = "default";
+        this.canvas.forEachObject(function (o) {
+          o.hoverCursor = "move";
+        });
         if (this.canvas.getActiveObjects().length > 0) {
           this.updateTip(
             defaultTips[parseInt(Math.random() * defaultTips.length)]
@@ -263,7 +281,6 @@ class ImageEditor {
         break;
       case "draw":
         this.canvas.isDrawingMode = true;
-        this.canvas.upperCanvasEl.style.cursor = "none";
         if (this.activateDrawMode) {
           this.activateDrawMode();
         }
@@ -375,6 +392,7 @@ class ImageEditor {
     } catch (error) {
       console.error("undo failed:", error);
     } finally {
+      this.setActiveTool(this.activeTool);
       this.isProcessing = false;
     }
   };
@@ -400,6 +418,7 @@ class ImageEditor {
     } catch (error) {
       console.error("redo failed:", error);
     } finally {
+      this.setActiveTool(this.activeTool);
       this.isProcessing = false;
     }
   };
@@ -441,7 +460,7 @@ class ImageEditor {
       });
 
       Object.values(currentObjects).forEach((obj) => {
-        if (!obj.noFocusing || obj.isDelete) {
+        if (!obj.noFocusing) {
           objectsToRemove.push(obj);
         }
       });
@@ -456,9 +475,6 @@ class ImageEditor {
           obj.evented = false;
         }
         this.canvas.add(obj);
-        if (obj.pathType === "weatherFront") {
-          generateWeatherFrontPath(obj, this.canvas);
-        }
       });
 
       this.canvas.renderAll();
@@ -687,6 +703,10 @@ class ImageEditor {
     testPanel.call(this);
   }
 
+  initializeAutoAlignment() {
+    autoAlignment(this.canvas);
+  }
+
   async init() {
     this.initializeToolbar();
     this.initializeMainPanel();
@@ -717,6 +737,7 @@ class ImageEditor {
     this.initializeFullScreen();
     this.initializeHideShowToolPanel();
     this.initializeNumberInput();
+    this.initializeAutoAlignment();
     return this;
   }
 }

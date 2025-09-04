@@ -31,7 +31,7 @@ export function weatherFrontLineDrawing(
     if (currentWeatherFrontLine.path.length <= 1) {
       canvas.remove(currentWeatherFrontLine);
     } else {
-      currentWeatherFrontLine.convertToCurve();
+      currentWeatherFrontLine.smoothing();
 
       const dims = currentWeatherFrontLine._calcDimensions();
       currentWeatherFrontLine.set({

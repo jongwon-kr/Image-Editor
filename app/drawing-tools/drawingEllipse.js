@@ -84,6 +84,7 @@ function ellipseDrawing(canvas) {
         ellipse.set({ selectable: true });
         ellipse.setCoords();
         canvas.setActiveObject(ellipse);
+        canvas.fire("object:modified");
       }
     }
 

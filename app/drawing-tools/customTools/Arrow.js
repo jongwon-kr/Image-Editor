@@ -221,6 +221,7 @@ export class Arrow extends fabric.Path {
     this._setupPathControls();
     this.setCoords();
 
+    this.canvas.preserveObjectStacking = false;
     this.canvas?.setActiveObject(this);
     this.canvas?.renderAll();
   }
@@ -231,6 +232,13 @@ export class Arrow extends fabric.Path {
     this.controls = this.tempControls;
 
     this.setCoords();
+
+    this.canvas.preserveObjectStacking = true;
+    const activeObject = this.canvas.getActiveObject();
+    this.canvas.discardActiveObject();
+    if (activeObject) {
+      this.canvas.setActiveObject(activeObject);
+    }
     this.canvas?.renderAll();
   }
 

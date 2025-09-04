@@ -6,7 +6,7 @@ import {
   selectAllObjects,
   ungroupObjects,
 } from "./utils.js";
-import { ICONS } from "../models/featIcons.ts";
+import { ICONS } from "../models/Icons.ts";
 
 interface MenuItem {
   text: string;
@@ -60,7 +60,13 @@ export function getMenuItems(
             text: "앞으로 가져오기",
             icon: ICONS.bringForward,
             action: () => {
-              canvas.bringObjectForward(target);
+              if (target.type === "activeselection") {
+                target._objects.forEach((obj: any) => {
+                  canvas.bringObjectForward(obj);
+                });
+              } else {
+                canvas.bringObjectForward(target);
+              }
               canvas.fire("object:modified");
               canvas.renderAll();
             },
@@ -69,7 +75,13 @@ export function getMenuItems(
             text: "뒤로 보내기",
             icon: ICONS.sendBackwards,
             action: () => {
-              canvas.sendObjectBackwards(target);
+              if (target.type === "activeselection") {
+                target._objects.forEach((obj: any) => {
+                  canvas.sendObjectBackwards(obj);
+                });
+              } else {
+                canvas.sendObjectBackwards(target);
+              }
               canvas.fire("object:modified");
               canvas.renderAll();
             },
@@ -78,7 +90,13 @@ export function getMenuItems(
             text: "맨 앞으로 가져오기",
             icon: ICONS.bringToFront,
             action: () => {
-              canvas.bringObjectToFront(target);
+              if (target.type === "activeselection") {
+                target._objects.forEach((obj: any) => {
+                  canvas.bringObjectToFront(obj);
+                });
+              } else {
+                canvas.bringObjectToFront(target);
+              }
               canvas.fire("object:modified");
               canvas.renderAll();
             },
@@ -87,7 +105,13 @@ export function getMenuItems(
             text: "맨 뒤로 보내기",
             icon: ICONS.sendToBack,
             action: () => {
-              canvas.sendObjectToBack(target);
+              if (target.type === "activeselection") {
+                target._objects.forEach((obj: any) => {
+                  canvas.sendObjectToBack(obj);
+                });
+              } else {
+                canvas.sendObjectToBack(target);
+              }
               canvas.fire("object:modified");
               canvas.renderAll();
             },
@@ -252,6 +276,11 @@ export function getMenuItems(
         if ((target as any).isEditing) {
           typeSpecificMenuItems.push(polyPathEditMenu);
           typeSpecificMenuItems.push({
+            text: "스무딩 하기",
+            icon: ICONS.smoothing,
+            action: () => (target as any).smoothing(),
+          });
+          typeSpecificMenuItems.push({
             text: "편집 모드 해제",
             icon: ICONS.exit,
             action: () => (target as any).exitEditMode(),
@@ -262,6 +291,19 @@ export function getMenuItems(
             icon: ICONS.edit,
             action: () => (target as any).enterEditMode(),
           });
+          if ((target as any).isSmoothing) {
+            typeSpecificMenuItems.push({
+              text: "직선으로 변경",
+              icon: ICONS.noBezier,
+              action: () => (target as any).toggleSmoothing(),
+            });
+          } else {
+            typeSpecificMenuItems.push({
+              text: "곡선으로 변경",
+              icon: ICONS.bezier,
+              action: () => (target as any).toggleSmoothing(),
+            });
+          }
         }
         break;
       case "weatherfrontline":
@@ -285,6 +327,11 @@ export function getMenuItems(
         if ((target as any).isEditing) {
           typeSpecificMenuItems.push(weatherFrontLineEditMenu);
           typeSpecificMenuItems.push({
+            text: "스무딩 하기",
+            icon: ICONS.smoothing,
+            action: () => (target as any).smoothing(),
+          });
+          typeSpecificMenuItems.push({
             text: "편집 모드 해제",
             icon: ICONS.exit,
             action: () => (target as any).exitEditMode(),
@@ -295,6 +342,19 @@ export function getMenuItems(
             icon: ICONS.edit,
             action: () => (target as any).enterEditMode(),
           });
+          if ((target as any).isSmoothing) {
+            typeSpecificMenuItems.push({
+              text: "직선으로 변경",
+              icon: ICONS.noBezier,
+              action: () => (target as any).toggleSmoothing(),
+            });
+          } else {
+            typeSpecificMenuItems.push({
+              text: "곡선으로 변경",
+              icon: ICONS.bezier,
+              action: () => (target as any).toggleSmoothing(),
+            });
+          }
         }
         break;
       case "group":

@@ -14,6 +14,7 @@ export class WeatherFrontLine extends fabric.Path {
   shapeSize = 8;
   isReflect = false;
   isEditing = false;
+  isSmoothing = false;
   tempControls = null;
 
   constructor(path, options = {}) {
@@ -29,51 +30,11 @@ export class WeatherFrontLine extends fabric.Path {
     this.spacing = options.spacing || 30;
     this.shapeSize = options.shapeSize || 8;
     this.isReflect = options.isReflect || false;
+    this.isSmoothing = options.isSmoothing ?? true;
 
     this.stroke = WeatherFrontLineColor[this.weatherFrontLineType].lineColor;
 
     this.on("mousedblclick", this._onDoubleClick);
-  }
-
-  convertToCurve() {
-    if (!this.path || this.path.length < 2) return;
-
-    const newPath = [this.path[0]];
-
-    for (let i = 1; i < this.path.length; i++) {
-      const prevSegment = newPath[newPath.length - 1];
-      const currentSegment = this.path[i];
-
-      if (currentSegment[0] === "L") {
-        const startX =
-          prevSegment[0] === "M"
-            ? prevSegment[1]
-            : prevSegment[prevSegment.length - 2];
-        const startY =
-          prevSegment[0] === "M"
-            ? prevSegment[2]
-            : prevSegment[prevSegment.length - 1];
-
-        const endX = currentSegment[1];
-        const endY = currentSegment[2];
-
-        const midX = (startX + endX) / 2;
-        const midY = (startY + endY) / 2;
-
-        newPath.push(["Q", midX, midY, endX, endY]);
-      } else {
-        newPath.push(currentSegment);
-      }
-    }
-
-    this.path = newPath;
-    this.dirty = true;
-
-    if (this.isEditing) {
-      this._setupPathControls();
-    }
-
-    this.setCoords();
   }
 
   _onDoubleClick() {
@@ -92,6 +53,7 @@ export class WeatherFrontLine extends fabric.Path {
     this._setupPathControls();
     this.setCoords();
 
+    this.canvas.preserveObjectStacking = false;
     this.canvas?.setActiveObject(this);
     this.canvas?.renderAll();
   }
@@ -102,6 +64,13 @@ export class WeatherFrontLine extends fabric.Path {
     this.controls = this.tempControls;
 
     this.setCoords();
+
+    this.canvas.preserveObjectStacking = true;
+    const activeObject = this.canvas.getActiveObject();
+    this.canvas.discardActiveObject();
+    if (activeObject) {
+      this.canvas.setActiveObject(activeObject);
+    }
     this.canvas?.renderAll();
   }
 
@@ -120,6 +89,114 @@ export class WeatherFrontLine extends fabric.Path {
       ...fabric.Object.prototype.controls,
       ...controls,
     };
+  }
+
+  toggleSmoothing() {
+    if (this.isSmoothing) {
+      this.straighten();
+    } else {
+      this.smoothing();
+    }
+  }
+
+  straighten() {
+    if (!this.isSmoothing) return;
+
+    const straightPath = this._getStraightPath();
+    if (straightPath.length < 2) return;
+
+    const anchorPoint = new fabric.Point(this.path[0][1], this.path[0][2]);
+    const anchorPointInCanvasPlane = fabric.util.transformPoint(
+      anchorPoint.subtract(this.pathOffset),
+      this.calcTransformMatrix()
+    );
+
+    this.set("path", straightPath);
+    this.setDimensions();
+
+    const newAnchorPointInCanvasPlane = fabric.util.transformPoint(
+      new fabric.Point(this.path[0][1], this.path[0][2]).subtract(
+        this.pathOffset
+      ),
+      this.calcTransformMatrix()
+    );
+    const diff = newAnchorPointInCanvasPlane.subtract(anchorPointInCanvasPlane);
+    this.set({ left: this.left - diff.x, top: this.top - diff.y });
+
+    this.isSmoothing = false;
+    this.dirty = true;
+    if (this.isEditing) {
+      this._setupPathControls();
+    }
+    this.setCoords();
+    this.canvas?.renderAll();
+    this.canvas?.fire("object:modified");
+  }
+
+  smoothing() {
+    const straightPath = this._getStraightPath();
+    if (straightPath.length < 2) {
+      return;
+    }
+
+    this.isSmoothing = true;
+
+    const anchorPoint = new fabric.Point(this.path[0][1], this.path[0][2]);
+    const anchorPointInCanvasPlane = fabric.util.transformPoint(
+      anchorPoint.subtract(this.pathOffset),
+      this.calcTransformMatrix()
+    );
+
+    let points = straightPath.map((p) => ({
+      x: p[p.length - 2],
+      y: p[p.length - 1],
+    }));
+
+    if (points.length < 2) {
+      this.set("path", straightPath);
+      return;
+    }
+
+    const newPath = [];
+    newPath.push(["M", points[0].x, points[0].y]);
+    const tension = 0.2;
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = i > 0 ? points[i - 1] : points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = i < points.length - 2 ? points[i + 2] : p2;
+
+      const cp1 = {
+        x: p1.x + (p2.x - p0.x) * tension,
+        y: p1.y + (p2.y - p0.y) * tension,
+      };
+      const cp2 = {
+        x: p2.x - (p3.x - p1.x) * tension,
+        y: p2.y - (p3.y - p1.y) * tension,
+      };
+      newPath.push(["C", cp1.x, cp1.y, cp2.x, cp2.y, p2.x, p2.y]);
+    }
+
+    this.set("path", newPath);
+    this.setDimensions();
+
+    const newAnchorPointInCanvasPlane = fabric.util.transformPoint(
+      new fabric.Point(this.path[0][1], this.path[0][2]).subtract(
+        this.pathOffset
+      ),
+      this.calcTransformMatrix()
+    );
+    const diff = newAnchorPointInCanvasPlane.subtract(anchorPointInCanvasPlane);
+    this.set({ left: this.left - diff.x, top: this.top - diff.y });
+
+    this.dirty = true;
+    if (this.isEditing) {
+      this._setupPathControls();
+    }
+    this.setCoords();
+    this.canvas?.renderAll();
+    this.canvas?.fire("object:modified");
   }
 
   addPoint(pointer) {
@@ -152,63 +229,25 @@ export class WeatherFrontLine extends fabric.Path {
     }
 
     if (insertionIndex !== -1) {
-      const anchorSegment = this.path[0];
-      const anchorPoint = new fabric.Point(
-        anchorSegment[anchorSegment.length - 2],
-        anchorSegment[anchorSegment.length - 1]
-      );
-      const anchorPointInCanvasPlane = fabric.util.transformPoint(
-        anchorPoint.subtract(this.pathOffset),
-        this.calcTransformMatrix()
-      );
-
-      const prevSegment = this.path[insertionIndex - 1];
-      const startX =
-        prevSegment[0] === "M"
-          ? prevSegment[1]
-          : prevSegment[prevSegment.length - 2];
-      const startY =
-        prevSegment[0] === "M"
-          ? prevSegment[2]
-          : prevSegment[prevSegment.length - 1];
-      const originalSegment = this.path[insertionIndex];
-      const endX = originalSegment[originalSegment.length - 2];
-      const endY = originalSegment[originalSegment.length - 1];
-      const newX = localPointer.x;
-      const newY = localPointer.y;
-      const midX1 = (startX + newX) / 2;
-      const midY1 = (startY + newY) / 2;
-      const newSegment1 = ["Q", midX1, midY1, newX, newY];
-      const midX2 = (newX + endX) / 2;
-      const midY2 = (newY + endY) / 2;
-      const newSegment2 = ["Q", midX2, midY2, endX, endY];
-
-      const newPath = [...this.path];
-      newPath.splice(insertionIndex, 1, newSegment1, newSegment2);
-
-      this.set("path", newPath);
-      this.setDimensions();
-      this._setupPathControls();
-
-      const newAnchorPointInCanvasPlane = fabric.util.transformPoint(
-        anchorPoint.subtract(this.pathOffset),
-        this.calcTransformMatrix()
-      );
-      const diff = newAnchorPointInCanvasPlane.subtract(
-        anchorPointInCanvasPlane
-      );
-      this.set({
-        left: this.left - diff.x,
-        top: this.top - diff.y,
-      });
-      this.setCoords();
-      this.canvas?.renderAll();
-      this.canvas?.fire("object:modified", { target: this });
+      straightPath.splice(insertionIndex, 0, [
+        "L",
+        localPointer.x,
+        localPointer.y,
+      ]);
+      this.set("path", straightPath);
+      if (this.isSmoothing) {
+        this.smoothing();
+      } else {
+        this.straighten();
+      }
     }
   }
 
   removePoint(pointer) {
-    if (!this.isEditing || !this.path || this.path.length <= 2) return;
+    if (!this.isEditing || !this.path) return;
+
+    const straightPath = this._getStraightPath();
+    if (straightPath.length <= 2) return;
 
     let minDistance = Infinity;
     let removalIndex = -1;
@@ -220,12 +259,13 @@ export class WeatherFrontLine extends fabric.Path {
     localPointer.x += this.pathOffset.x;
     localPointer.y += this.pathOffset.y;
 
-    for (let i = 0; i < this.path.length; i++) {
-      const segment = this.path[i];
-      const pointX = segment[segment.length - 2];
-      const pointY = segment[segment.length - 1];
-      const controlPoint = new fabric.Point(pointX, pointY);
-      const distance = localPointer.distanceFrom(controlPoint);
+    for (let i = 0; i < straightPath.length; i++) {
+      const segment = straightPath[i];
+      const point = new fabric.Point(
+        segment[segment.length - 2],
+        segment[segment.length - 1]
+      );
+      const distance = localPointer.distanceFrom(point);
 
       if (distance < minDistance) {
         minDistance = distance;
@@ -233,60 +273,23 @@ export class WeatherFrontLine extends fabric.Path {
       }
     }
 
-    if (removalIndex !== -1 && minDistance <= 5) {
-      const anchorIndex = removalIndex === 0 ? 1 : 0;
-      const anchorSegment = this.path[anchorIndex];
-      const anchorPoint = new fabric.Point(
-        anchorSegment[anchorSegment.length - 2],
-        anchorSegment[anchorSegment.length - 1]
-      );
-      const anchorPointInCanvasPlane = fabric.util.transformPoint(
-        anchorPoint.subtract(this.pathOffset),
-        this.calcTransformMatrix()
-      );
-
-      const newPath = [...this.path];
-      if (removalIndex === 0 && newPath.length > 2) {
-        const nextPointSegment = newPath[1];
-        const newStartPoint = [
+    if (removalIndex !== -1 && minDistance <= 10) {
+      straightPath.splice(removalIndex, 1);
+      if (removalIndex === 0 && straightPath.length > 0) {
+        const nextPoint = straightPath[0];
+        straightPath[0] = [
           "M",
-          nextPointSegment[nextPointSegment.length - 2],
-          nextPointSegment[nextPointSegment.length - 1],
+          nextPoint[nextPoint.length - 2],
+          nextPoint[nextPoint.length - 1],
         ];
-        newPath.splice(0, 2, newStartPoint);
-      } else if (removalIndex === newPath.length - 1) {
-        newPath.pop();
-      } else {
-        const prevSegment = newPath[removalIndex - 1];
-        const nextSegment = newPath[removalIndex + 1];
-        const startX = prevSegment[prevSegment.length - 2];
-        const startY = prevSegment[prevSegment.length - 1];
-        const endX = nextSegment[nextSegment.length - 2];
-        const endY = nextSegment[nextSegment.length - 1];
-        const midX = (startX + endX) / 2;
-        const midY = (startY + endY) / 2;
-        const newSegment = ["Q", midX, midY, endX, endY];
-        newPath.splice(removalIndex, 2, newSegment);
       }
+      this.set("path", straightPath);
 
-      this.set("path", newPath);
-      this.setDimensions();
-      this._setupPathControls();
-
-      const newAnchorPointInCanvasPlane = fabric.util.transformPoint(
-        anchorPoint.subtract(this.pathOffset),
-        this.calcTransformMatrix()
-      );
-      const diff = newAnchorPointInCanvasPlane.subtract(
-        anchorPointInCanvasPlane
-      );
-      this.set({
-        left: this.left - diff.x,
-        top: this.top - diff.y,
-      });
-      this.setCoords();
-      this.canvas?.renderAll();
-      this.canvas.fire("object:modified", { target: this });
+      if (this.isSmoothing) {
+        this.smoothing();
+      } else {
+        this.straighten();
+      }
     }
   }
 
@@ -296,12 +299,12 @@ export class WeatherFrontLine extends fabric.Path {
 
     for (const segment of this.path) {
       const command = segment[0];
-      if (command === "M") {
+      if (command === "M" || command === "L") {
         straightPath.push(segment);
       } else if (command === "Q") {
         straightPath.push(["L", segment[3], segment[4]]);
-      } else {
-        straightPath.push(segment);
+      } else if (command === "C") {
+        straightPath.push(["L", segment[5], segment[6]]);
       }
     }
     return straightPath;
@@ -420,7 +423,7 @@ export class WeatherFrontLine extends fabric.Path {
           currentPoint = { x: coords[0], y: coords[1] };
           points.push(currentPoint);
           break;
-        case "Q":
+        case "Q": {
           const startPoint = { ...currentPoint };
           const p1 = { x: coords[0], y: coords[1] };
           const p2 = { x: coords[2], y: coords[3] };
@@ -438,6 +441,30 @@ export class WeatherFrontLine extends fabric.Path {
           }
           currentPoint = p2;
           break;
+        }
+        case "C": {
+          const startPoint = { ...currentPoint };
+          const p1 = { x: coords[0], y: coords[1] };
+          const p2 = { x: coords[2], y: coords[3] };
+          const p3 = { x: coords[4], y: coords[5] };
+          for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            const tInv = 1 - t;
+            const x =
+              tInv ** 3 * startPoint.x +
+              3 * tInv ** 2 * t * p1.x +
+              3 * tInv * t ** 2 * p2.x +
+              t ** 3 * p3.x;
+            const y =
+              tInv ** 3 * startPoint.y +
+              3 * tInv ** 2 * t * p1.y +
+              3 * tInv * t ** 2 * p2.y +
+              t ** 3 * p3.y;
+            points.push({ x, y });
+          }
+          currentPoint = p3;
+          break;
+        }
       }
     }
     return points;
@@ -461,20 +488,6 @@ export class WeatherFrontLine extends fabric.Path {
     ctx.fill();
   }
 
-  _getSegmentEndPoint(segment) {
-    switch (segment[0]) {
-      case "M":
-      case "L":
-        return { x: segment[1], y: segment[2] };
-      case "Q":
-        return { x: segment[3], y: segment[4] };
-      case "C":
-        return { x: segment[5], y: segment[6] };
-      default:
-        return { x: 0, y: 0 };
-    }
-  }
-
   toObject(propertiesToInclude = []) {
     return super.toObject([
       ...propertiesToInclude,
@@ -482,6 +495,7 @@ export class WeatherFrontLine extends fabric.Path {
       "spacing",
       "shapeSize",
       "isReflect",
+      "isSmoothing",
     ]);
   }
 }

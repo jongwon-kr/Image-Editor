@@ -76,6 +76,7 @@ async function Paste(canvas, originalObj, x = null, y = null) {
   const clonedObj = await originalObj.clone();
   canvas.discardActiveObject();
   clonedObj.set({
+    id: generateUniqueId(),
     left: clonedObj.left + 10,
     top: clonedObj.top + 10,
     evented: true,
@@ -89,7 +90,15 @@ async function Paste(canvas, originalObj, x = null, y = null) {
 
   if (clonedObj._objects && clonedObj.type !== "group") {
     clonedObj._objects.forEach((obj) => {
-      obj.set("id", generateUniqueId());
+      const objLabel = obj.label;
+      obj.set({
+        id: generateUniqueId(),
+        label: "",
+        desc: objLabel.replace(/\s+\d+$/, ""),
+        left: obj.left + 10,
+        top: obj.top + 10,
+        evented: true,
+      });
       canvas.add(obj);
     });
 
@@ -99,7 +108,14 @@ async function Paste(canvas, originalObj, x = null, y = null) {
 
     canvas.setActiveObject(newSelection);
   } else {
-    clonedObj.set("id", generateUniqueId());
+    clonedObj.set({
+      id: generateUniqueId(),
+      label: "",
+      desc: originalObj.label.replace(/\s+\d+$/, ""),
+      left: clonedObj.left + 10,
+      top: clonedObj.top + 10,
+      evented: true,
+    });
     canvas.add(clonedObj);
     canvas.setActiveObject(clonedObj);
   }

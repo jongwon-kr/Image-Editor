@@ -32,8 +32,6 @@ export function polyPathDrawing(canvas) {
     if (currentPolyPath.path.length <= 1) {
       canvas.remove(currentPolyPath);
     } else {
-      currentPolyPath.convertToCurve();
-
       const dims = currentPolyPath._calcDimensions();
       currentPolyPath.set({
         left: dims.left,
@@ -56,6 +54,7 @@ export function polyPathDrawing(canvas) {
     currentPolyPath = null;
     canvas.isDrawingPolyPathMode = false;
     canvas.renderAll();
+    canvas.fire("object:modified");
   };
 
   /**

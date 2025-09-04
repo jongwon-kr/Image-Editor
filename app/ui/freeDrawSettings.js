@@ -1,12 +1,15 @@
-import { ICONS } from "../models/featIcons.ts";
-import { getDeleteArea } from "../utils/utils.js";
+import { ICONS } from "../models/Icons.ts";
+import { startPicker } from "../utils/eyeDropper.ts";
+import {
+  initializeColorPicker,
+  initializeEyedropper,
+} from "../utils/drawingUtils.ts";
 
 function freeDrawSettings() {
   let width = 5;
   let style = "pencil";
   let color = "rgb(0, 0, 0)";
   let drawingMode = "add";
-  let cursorCircle = null;
 
   const _self = this;
   const mainPanel = document.querySelector(
@@ -27,23 +30,11 @@ function freeDrawSettings() {
       `
         <div>
           <div class="input-container">
-            <label>지운 영역 복구</label>
-            <button id="roll-back-delete" class="btn_b">복구하기</button>
-          </div>
-          <div class="input-container">
             <label for="erase">지우개</label>
             <label class="toggle-wrapper">
               <input type="checkbox" id="erase" name="erase">
               <span class="slider"></span>
             </label>
-          </div>
-          <div class="input-container">
-            <label>두께</label>
-            <div class="custom-number-input">
-              <button class="decrease">-</button>
-              <input type="number" min="1" value="5" id="input-brush-width"/>
-              <button class="increase">+</button>
-            </div>
           </div>
           <div class="input-container">
             <label>그리기 종류</label>
@@ -57,74 +48,114 @@ function freeDrawSettings() {
             <label>그리기 색상</label>
             <input id="color-picker" value="rgb(0, 0, 0)"/>
           </div>
+          <div class="input-container">
+            <label>두께</label>
+            <div class="custom-number-input">
+              <button class="decrease">-</button>
+              <input type="number" min="1" value="5" id="input-brush-width"/>
+              <button class="increase">+</button>
+            </div>
+          </div>
+          <div class="input-container">
+            <label>펜 미리보기</label>
+            <div id="brush-preview-container" style="display: flex; align-items: center; justify-content: center; height: 50px; background-color: #f0f0f0; border-radius: 8px; padding: 5px;">
+              <div id="brush-preview" style="border-radius: 50%;"></div>
+            </div>
+          </div>
         </div>
       `
     );
 
-  const rollBackDeleteBtn = document.querySelector("#roll-back-delete");
-  rollBackDeleteBtn.addEventListener("click", () => {
-    getDeleteArea().forEach((o) => {
-      _self.canvas.remove(o);
-    });
-    _self.canvas.fire("object:modified");
-  });
+  const pencilCursor = `url('data:image/svg+xml;utf8,${encodeURIComponent(
+    ICONS.pencil
+  )}') 2 30, crosshair`;
+  const eraserCursor = `url('data:image/svg+xml;utf8,${encodeURIComponent(
+    ICONS.eraser
+  )}') 3 30, crosshair`;
+
+  const brushPreview = document.querySelector(
+    `${_self.containerSelector} #brush-preview`
+  );
+
+  const updateBrushPreview = () => {
+    if (drawingMode === "delete") {
+      brushPreview.textContent = "지우개 모드";
+      brushPreview.style.width = "100%";
+      brushPreview.style.height = "100%";
+      brushPreview.style.backgroundColor = "transparent";
+      brushPreview.style.placeContent = "center";
+      return;
+    }
+
+    if (brushPreview) {
+      const previewSize = Math.min(width, 48);
+      brushPreview.textContent = "";
+      brushPreview.style.width = `${previewSize}px`;
+      brushPreview.style.height = `${previewSize}px`;
+      brushPreview.style.backgroundColor = color;
+      brushPreview.style.placeContent = "center";
+    }
+  };
 
   const updateBrush = () => {
-    try {
-      _self.canvas.isDrawingMode = true;
-      switch (style) {
-        case "circle":
-          _self.canvas.freeDrawingBrush = new fabric.CircleBrush(_self.canvas);
-          break;
-        case "spray":
-          _self.canvas.freeDrawingBrush = new fabric.SprayBrush(_self.canvas);
-          break;
-        default:
-          _self.canvas.freeDrawingBrush = new fabric.PencilBrush(_self.canvas);
-          break;
-      }
-      if (drawingMode === "delete") {
-        _self.canvas.freeDrawingBrush = new fabric.PencilBrush(_self.canvas);
-        _self.canvas.freeDrawingBrush.color = "white";
-        _self.canvas.freeDrawingBrush.globalCompositeOperation =
-          "destination-out";
-      } else {
-        _self.canvas.freeDrawingBrush.color = color;
-        _self.canvas.freeDrawingBrush.globalCompositeOperation = "source-over";
-      }
-      _self.canvas.freeDrawingBrush.width = width;
-    } catch (error) {
-      console.error("Failed to update brush:", error);
-    }
-  };
-
-  const handleMouseMove = (e) => {
-    const pointer = _self.canvas.getPointer(e.e);
-    if (cursorCircle) {
-      _self.canvas.remove(cursorCircle);
-    }
-    cursorCircle = new fabric.Circle({
-      left: pointer.x - width / 2,
-      top: pointer.y - width / 2,
-      radius: width / 2,
-      fill: "",
-      stroke: drawingMode === "delete" ? "red" : "black",
-      strokeWidth: 1,
-      selectable: false,
-      evented: false,
-      excludeFromExport: true,
-      noFocusing: true,
-    });
-    _self.canvas.add(cursorCircle);
-    _self.canvas.renderAll();
-  };
-
-  const handleMouseOut = () => {
-    if (cursorCircle) {
-      _self.canvas.remove(cursorCircle);
-      cursorCircle = null;
+    if (drawingMode === "delete") {
+      _self.canvas.isDrawingMode = false;
+      _self.canvas.selection = false;
+      _self.canvas.defaultCursor = eraserCursor;
+      _self.canvas.forEachObject(function (o) {
+        o.selectable = false;
+        o.hoverCursor = eraserCursor;
+      });
       _self.canvas.renderAll();
+      return;
     }
+
+    _self.canvas.forEachObject(function (o) {
+      o.selectable = true;
+      o.hoverCursor = "move";
+    });
+
+    _self.canvas.isDrawingMode = true;
+    _self.canvas.freeDrawingCursor = pencilCursor;
+    _self.canvas.defaultCursor = "default";
+
+    switch (style) {
+      case "circle":
+        _self.canvas.freeDrawingBrush = new fabric.CircleBrush(_self.canvas);
+        break;
+      case "spray":
+        _self.canvas.freeDrawingBrush = new fabric.SprayBrush(_self.canvas);
+        break;
+      default:
+        _self.canvas.freeDrawingBrush = new fabric.PencilBrush(_self.canvas);
+        break;
+    }
+
+    if (_self.canvas.freeDrawingBrush) {
+      _self.canvas.freeDrawingBrush.color = color;
+      _self.canvas.freeDrawingBrush.width = width;
+      _self.canvas.freeDrawingBrush.decimate = 5;
+    }
+  };
+
+  const eraseOnMove = (opt) => {
+    if (opt.target && opt.target.isFreeDrawn) {
+      _self.canvas.remove(opt.target);
+      _self.canvas.renderAll();
+      _self.canvas.fire("object:modified");
+    }
+  };
+
+  const startErasing = () => {
+    _self.canvas.perPixelTargetFind = true;
+    _self.canvas.on("mouse:move", eraseOnMove);
+    _self.canvas.on("mouse:up", stopErasing);
+  };
+
+  const stopErasing = () => {
+    _self.canvas.off("mouse:move", eraseOnMove);
+    _self.canvas.off("mouse:up", stopErasing);
+    _self.canvas.perPixelTargetFind = false;
   };
 
   _self.activateDrawMode = () => {
@@ -132,128 +163,76 @@ function freeDrawSettings() {
       _self.cleanupDrawMode();
     }
 
-    _self.canvas.on("mouse:move", handleMouseMove);
-    _self.canvas.on("mouse:out", handleMouseOut);
-    _self.canvas.on("path:created", (e) => {
-      if (drawingMode === "delete") {
-        e.path.noFocusing = true;
-        e.path.evented = false;
-        e.path.selectable = false;
-        e.path.isDelete = true;
-        e.path.label = "삭제영역";
-      }
-      _self.canvas.renderAll();
-    });
+    if (drawingMode === "delete") {
+      _self.canvas.on("mouse:down", startErasing);
+    } else {
+      _self.canvas.on("path:created", (e) => {
+        e.path.isFreeDrawn = true;
+      });
+    }
+
     updateBrush();
+    updateBrushPreview();
   };
 
   _self.cleanupDrawMode = () => {
-    if (cursorCircle) {
-      _self.canvas.remove(cursorCircle);
-      cursorCircle = null;
-      _self.canvas.renderAll();
-    }
-    _self.canvas.off("mouse:move", handleMouseMove);
-    _self.canvas.off("mouse:out", handleMouseOut);
+    _self.canvas.isDrawingMode = false;
+    _self.canvas.hoverCursor = "move";
     _self.canvas.off("path:created");
+    _self.canvas.off("mouse:down", startErasing);
+    _self.canvas.off("mouse:move", eraseOnMove);
+    _self.canvas.off("mouse:up", stopErasing);
   };
 
   const inputBrushWidth = document.querySelector(
-    `${this.containerSelector} .toolpanel#draw-panel .content #input-brush-width`
+    `${_self.containerSelector} .toolpanel#draw-panel .content #input-brush-width`
   );
   inputBrushWidth.addEventListener("change", function () {
-    try {
-      width = parseInt(this.value, 10);
-      updateBrush();
-    } catch (error) {
-      console.error("Failed to update brush width:", error);
-    }
+    width = parseInt(this.value, 10);
+    updateBrush();
+    updateBrushPreview();
   });
 
-  document
-    .querySelector(
-      `${this.containerSelector} .toolpanel#draw-panel .content .decrease`
-    )
-    .addEventListener("click", () => {
-      width = Math.max(1, width - 1);
-      inputBrushWidth.value = width;
-      updateBrush();
-    });
-  document
-    .querySelector(
-      `${this.containerSelector} .toolpanel#draw-panel .content .increase`
-    )
-    .addEventListener("click", () => {
-      width += 1;
-      inputBrushWidth.value = width;
-      updateBrush();
-    });
-
   const inputBrushType = document.querySelector(
-    `${this.containerSelector} .toolpanel#draw-panel .content #input-brush-type`
+    `${_self.containerSelector} .toolpanel#draw-panel .content #input-brush-type`
   );
   inputBrushType.addEventListener("change", function () {
     style = this.value;
     updateBrush();
   });
 
-  function initializeColorPickerWithEyedropper(pickerElement, onColorChange) {
-    const spectrumOptions = {
-      type: "color",
-      showInput: true,
-      showButtons: false,
-      allowEmpty: false,
-      move: onColorChange,
-    };
-
-    pickerElement.spectrum(spectrumOptions).on("change.spectrum", (e, c) => {
-      onColorChange(c);
-    });
-
-    if (window.EyeDropper) {
-      const eyedropperBtn = document.createElement("button");
-      eyedropperBtn.className = "eyedropper-btn";
-      eyedropperBtn.innerHTML = ICONS.eyeDrop;
-      pickerElement.parent().append(eyedropperBtn);
-
-      eyedropperBtn.addEventListener("click", async () => {
-        try {
-          const eyeDropper = new EyeDropper();
-          const result = await eyeDropper.open();
-          const newColor = tinycolor(result.sRGBHex);
-          pickerElement.spectrum("set", newColor);
-          onColorChange(newColor);
-        } catch (e) {
-          console.log("Color selection cancelled.");
-        }
-      });
-    }
-  }
-
-  const colorPicker = $(
-    `${this.containerSelector} .toolpanel#draw-panel .content #color-picker`
-  );
-
-  const handleColorChange = (newColor) => {
-    try {
-      color = newColor.toRgbString();
-      if (drawingMode === "add") {
-        updateBrush();
-      }
-    } catch (error) {
-      console.error("Failed to update brush color:", error);
-    }
-  };
-
-  initializeColorPickerWithEyedropper(colorPicker, handleColorChange);
-
   const eraseCheckbox = document.querySelector(
-    `${this.containerSelector} .toolpanel#draw-panel .content #erase`
+    `${_self.containerSelector} .toolpanel#draw-panel .content #erase`
   );
   eraseCheckbox.addEventListener("change", function () {
     drawingMode = this.checked ? "delete" : "add";
-    updateBrush();
+    _self.activateDrawMode();
   });
+
+  const colorPicker = $(
+    `${_self.containerSelector} .toolpanel#draw-panel .content #color-picker`
+  );
+  const handleColorChange = (newColor) => {
+    color = newColor.toRgbString();
+    if (drawingMode === "add") {
+      updateBrush();
+    }
+    updateBrushPreview();
+  };
+
+  initializeColorPicker(colorPicker, handleColorChange);
+  initializeEyedropper(colorPicker, () => {
+    startPicker((selectedColor) => {
+      colorPicker.spectrum("set", selectedColor);
+      color = selectedColor;
+      if (drawingMode === "add") {
+        updateBrush();
+      }
+      updateBrushPreview();
+    });
+  });
+
+  updateBrushPreview();
 }
 
 export { freeDrawSettings };

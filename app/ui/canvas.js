@@ -10,7 +10,6 @@ import { openMenu } from "../utils/contextMenu.ts";
 
 async function canvas() {
   let prevPosition = { left: 0, top: 0 };
-  let guideLines = [];
   let lastMouseX = null;
   let lastMouseY = null;
   let isDraggingObject = false;
@@ -282,26 +281,15 @@ async function canvas() {
         fabricCanvas.fire("object:modified");
       }
 
-      guideLines.forEach((line) => fabricCanvas.remove(line));
-      guideLines = [];
       fabricCanvas.renderAll();
     });
 
     fabricCanvas.on("object:added", (e) => {
       const obj = e.target;
-      if (obj.isDelete) {
-        obj.label = "삭제영역";
-        fabricCanvas.fire("modified");
-      }
-
       if (!obj.label || obj.label === "") {
         assignObjectLabel(fabricCanvas, obj);
         fabricCanvas.fire("modified");
       }
-    });
-
-    fabricCanvas.on("object:removed", (e) => {
-      const obj = e.target;
     });
 
     fabricCanvas.on("selection:created", (e) => {
@@ -324,7 +312,6 @@ async function canvas() {
 
     fabricCanvas.on("object:moving", (e) => {
       const obj = e.target;
-      manageGuideLines(fabricCanvas, obj, guideLines);
       fabricCanvas.renderAll();
     });
 
@@ -355,43 +342,27 @@ async function canvas() {
         if (parsedData && typeof parsedData === "object") {
           fabricCanvas.clear();
 
-          const viewportTransform = parsedData.viewportTransform || [
-            1, 0, 0, 1, 0, 0,
-          ];
-          const zoomLevel = viewportTransform[0] || 1;
-
-          const canvasWidth =
-            parsedData.width ||
-            parsedData.backgroundImage?.width *
-              parsedData.backgroundImage?.scaleX ||
-            fabricCanvas.originalW ||
-            1280;
-          const canvasHeight =
-            parsedData.height ||
-            parsedData.backgroundImage?.height *
-              parsedData.backgroundImage?.scaleY ||
-            fabricCanvas.originalH ||
-            720;
-          const scaleX = parsedData.backgroundImage?.scaleX || 1;
-          const scaleY = parsedData.backgroundImage?.scaleY || 1;
-
-          fabricCanvas.setWidth(canvasWidth);
-          fabricCanvas.setHeight(canvasHeight);
-          fabricCanvas.originalW = canvasWidth;
-          fabricCanvas.originalH = canvasHeight;
-
-          const widthInput = document.querySelector(
-            `${this.containerSelector} .toolpanel#background-panel .content #input-width`
-          );
-          const heightInput = document.querySelector(
-            `${this.containerSelector} .toolpanel#background-panel .content #input-height`
-          );
-          if (widthInput && heightInput) {
-            widthInput.value = Math.round(canvasWidth);
-            heightInput.value = Math.round(canvasHeight);
-          }
-
           await fabricCanvas.loadFromJSON(parsedData, async () => {
+            const viewportTransform = parsedData.viewportTransform || [
+              1, 0, 0, 1, 0, 0,
+            ];
+            const zoomLevel = viewportTransform[0] || 1;
+
+            const canvasWidth =
+              parsedData.width ||
+              parsedData.backgroundImage?.width *
+                parsedData.backgroundImage?.scaleX ||
+              fabricCanvas.originalW ||
+              1280;
+            const canvasHeight =
+              parsedData.height ||
+              parsedData.backgroundImage?.height *
+                parsedData.backgroundImage?.scaleY ||
+              fabricCanvas.originalH ||
+              720;
+            const scaleX = parsedData.backgroundImage?.scaleX || 1;
+            const scaleY = parsedData.backgroundImage?.scaleY || 1;
+
             if (parsedData.backgroundImage?.src) {
               const img = await fabric.FabricImage.fromURL(
                 parsedData.backgroundImage.src
@@ -403,8 +374,12 @@ async function canvas() {
                 top: 0,
               });
               fabricCanvas.backgroundImage = img;
-              imgEditor.applyZoom(zoomLevel);
+              fabricCanvas.originalW = img.width;
+              fabricCanvas.originalH = img.height;
             }
+            fabricCanvas.originalW = canvasWidth / zoomLevel;
+            fabricCanvas.originalH = canvasHeight / zoomLevel;
+            fabricCanvas.setViewportTransform(viewportTransform);
           });
           fabricCanvas.renderAll();
         } else {
@@ -458,35 +433,36 @@ async function canvas() {
 
   function assignObjectLabel(fabricCanvas, obj) {
     if (obj.noFocusing) return;
-    let labelPrefix = "도형";
+
+    const typeToKorean = {
+      ctextbox: "텍스트",
+      polygon: "도형",
+      ellipse: "원",
+      triangle: "삼각형",
+      rect: "사각형",
+      image: "이미지",
+      group: "그룹",
+      curvedline: "곡선",
+      arrow: "화살표",
+      polypath: "다각형",
+      weatherfrontline: "날씨전선",
+    };
+
     let desc = obj.desc || obj.type || "unknown";
 
-    if (desc === "ctextbox") labelPrefix = "텍스트";
-    else if (desc === "polygon") labelPrefix = "도형";
-    else if (desc === "ellipse") labelPrefix = "원";
-    else if (desc === "triangle") labelPrefix = "삼각형";
-    else if (desc === "rect") labelPrefix = "사각형";
-    else if (desc === "image") labelPrefix = "이미지";
-    else if (desc === "group") labelPrefix = "그룹";
-    else if (desc === "curvedline") labelPrefix = "곡선";
-    else if (desc === "arrow") labelPrefix = "화살표";
-    else if (desc === "polypath") labelPrefix = "다각형";
-    else if (desc === "weatherfrontline") labelPrefix = "날씨전선";
+    const baseName = typeToKorean[desc] || desc;
 
     const sameObjects = fabricCanvas
       .getObjects()
-      .filter(
-        (o) =>
-          o.label &&
-          (o.label.startsWith(desc) || o.label.startsWith(labelPrefix))
-      );
+      .filter((o) => o.label && o.label.startsWith(baseName));
 
     const usedNumbers = sameObjects
       .map((o) => {
-        const match = o.label.match(
-          new RegExp(`^(?:${desc}|${labelPrefix})(?: (\\d+))?$`)
-        );
-        return match && match[1] ? parseInt(match[1], 10) : 0;
+        const regex = new RegExp(`^${escapeRegExp(baseName)}(?: (\\d+))?$`);
+        const match = o.label.match(regex);
+
+        if (!match) return null;
+        return match[1] ? parseInt(match[1], 10) : 1;
       })
       .filter((num) => num !== null)
       .sort((a, b) => a - b);
@@ -496,58 +472,18 @@ async function canvas() {
       nextNumber++;
     }
 
-    const label = usedNumbers.includes(0)
-      ? `${desc} ${nextNumber}`
-      : desc === obj.type
-      ? `${labelPrefix} ${nextNumber}`
-      : desc;
-    obj.set({ label });
+    const label =
+      usedNumbers.length > 0 ? `${baseName} ${nextNumber}` : baseName;
+
+    obj.set({ label: label });
   }
 
-  function manageGuideLines(fabricCanvas, obj, guideLines) {
-    const canvasWidth = fabricCanvas.originalW;
-    const canvasHeight = fabricCanvas.originalH;
-    const snapThreshold = 5;
+  function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
 
-    const objWidth = obj.getScaledWidth();
-    const objHeight = obj.getScaledHeight();
-    const objCenterX = obj.left + objWidth / 2;
-    const objCenterY = obj.top + objHeight / 2;
-    const canvasCenterX = canvasWidth / 2;
-    const canvasCenterY = canvasHeight / 2;
-
-    guideLines.forEach((line) => fabricCanvas.remove(line));
-    guideLines.length = 0;
-
-    if (Math.abs(objCenterX - canvasCenterX) < snapThreshold) {
-      obj.set({ left: canvasCenterX - objWidth / 2 });
-      guideLines.push(
-        new fabric.Line([canvasCenterX, 0, canvasCenterX, canvasHeight], {
-          stroke: "rgba(0, 120, 215, 0.8)",
-          strokeWidth: 1,
-          strokeDashArray: [5, 5],
-          selectable: false,
-          evented: false,
-          excludeFromExport: true,
-          noFocusing: true,
-        })
-      );
-    }
-    if (Math.abs(objCenterY - canvasCenterY) < snapThreshold) {
-      obj.set({ top: canvasCenterY - objHeight / 2 });
-      guideLines.push(
-        new fabric.Line([0, canvasCenterY, canvasWidth, canvasCenterY], {
-          stroke: "rgba(0, 120, 215, 0.8)",
-          strokeWidth: 1,
-          strokeDashArray: [5, 5],
-          selectable: false,
-          evented: false,
-          excludeFromExport: true,
-          noFocusing: true,
-        })
-      );
-    }
-    guideLines.forEach((line) => fabricCanvas.add(line));
+  function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
   function saveCanvasState(fabricCanvas, history) {
@@ -619,6 +555,33 @@ async function canvas() {
           break;
         case "h":
           context.setActiveTool("hand");
+          break;
+        case "1":
+          context.setActiveTool("ellipse");
+          break;
+        case "2":
+          context.setActiveTool("triangle");
+          break;
+        case "3":
+          context.setActiveTool("rect");
+          break;
+        case "4":
+          context.setActiveTool("shapes");
+          break;
+        case "5":
+          context.setActiveTool("draw");
+          break;
+        case "6":
+          context.setActiveTool("curvedLine");
+          break;
+        case "7":
+          context.setActiveTool("arrow");
+          break;
+        case "8":
+          context.setActiveTool("path");
+          break;
+        case "9":
+          context.setActiveTool("weatherFrontLine");
           break;
       }
     }

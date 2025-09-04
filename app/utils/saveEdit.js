@@ -9,8 +9,8 @@ import { imgEditor } from "../index.ts";
 function save(name, value) {
   let dataToSave = value;
   if (value && typeof value === "object" && !Array.isArray(value)) {
-    value.width = parseInt(imgEditor.canvas.getWidth());
-    value.height = parseInt(imgEditor.canvas.getHeight());
+    value.width = parseInt(imgEditor.canvas.originalW);
+    value.height = parseInt(imgEditor.canvas.originalH);
     dataToSave = JSON.stringify(value);
   } else if (typeof value !== "string") {
     console.error("Invalid value type for save:", value);
@@ -53,7 +53,7 @@ async function upload(value) {
  * @returns {string|null}
  */
 function load(name) {
-  return localStorage.getItem(name); // 문자열 또는 null 반환
+  return localStorage.getItem(name);
 }
 
 /**

@@ -89,6 +89,7 @@ function rectDrawing(canvas) {
         rect.set({ selectable: true });
         rect.setCoords();
         canvas.setActiveObject(rect);
+        canvas.fire("object:modified");
       }
     }
 

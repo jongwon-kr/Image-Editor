@@ -16,10 +16,12 @@ function processFiles(files) {
     const allowedTypes = ["image/jpeg", "image/png", "image/svg+xml"];
     let pending = files.length;
 
-    const canvasWidth = canvas.originalW;
-    const canvasHeight = canvas.originalH;
-    const centerX = canvasWidth / 2;
-    const centerY = canvasHeight / 2;
+    const vpt = canvas.viewportTransform;
+    const zoom = vpt[0];
+    const canvasWidth = canvas.width / zoom;
+    const canvasHeight = canvas.height / zoom;
+    const startX = 50 - vpt[4] / zoom;
+    const startY = 50 - vpt[5] / zoom;
 
     for (let file of files) {
       if (!(file instanceof Blob) || !allowedTypes.includes(file.type)) {
@@ -41,7 +43,7 @@ function processFiles(files) {
               obj.set({ label: file.name.split(".")[0] });
             }
 
-            obj.set({ left: centerX, top: centerY }).setCoords();
+            obj.set({ left: startX, top: startY }).setCoords();
             canvas.add(obj);
             canvas.fire("object:modified");
             canvas.renderAll();
@@ -62,7 +64,7 @@ function processFiles(files) {
 
           img.scaleToHeight(300);
           img.scaleToWidth(300);
-          img.set({ left: centerX, top: centerY }).setCoords();
+          img.set({ left: startX, top: startY }).setCoords();
 
           canvas.add(img);
           canvas.fire("object:modified");

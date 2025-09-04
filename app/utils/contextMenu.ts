@@ -25,8 +25,8 @@ function createMenuElement(
   const menu = document.createElement("ul");
   menu.id = "context-menu";
   menu.className = "context-menu";
-  menu.style.left = `${pointer.x + 1}px`;
-  menu.style.top = `${pointer.y + 1}px`;
+  menu.style.left = `-9999px`;
+  menu.style.top = `-9999px`;
 
   menu.addEventListener("mousedown", (e) => e.stopPropagation());
   menu.addEventListener("click", (e) => e.stopPropagation());
@@ -70,7 +70,9 @@ function createMenuElement(
       submenu.className = "context-submenu";
 
       menuItem.onclick = () => {
-        const currentSubmenu = menuItem.querySelector(".context-submenu");
+        const currentSubmenu = menuItem.querySelector(
+          ".context-submenu"
+        ) as HTMLElement;
         if (openSubmenu && openSubmenu !== currentSubmenu) {
           openSubmenu.style.display = "none";
         }
@@ -80,6 +82,22 @@ function createMenuElement(
         } else {
           currentSubmenu.style.display = "block";
           openSubmenu = currentSubmenu;
+
+          const menuRect = menuItem.getBoundingClientRect();
+          const submenuRect = currentSubmenu.getBoundingClientRect();
+
+          currentSubmenu.style.left = "";
+          currentSubmenu.style.top = "";
+
+          if (submenuRect.right > window.innerWidth) {
+            currentSubmenu.style.left = `-${submenuRect.width}px`;
+          }
+
+          if (submenuRect.bottom > window.innerHeight) {
+            currentSubmenu.style.top = `-${
+              submenuRect.height - menuRect.height
+            }px`;
+          }
         }
       };
 
@@ -141,6 +159,21 @@ function createMenuElement(
   });
 
   document.body.appendChild(menu);
+
+  const menuRect = menu.getBoundingClientRect();
+  let x = pointer.x + 1;
+  let y = pointer.y + 1;
+
+  if (x + menuRect.width > window.innerWidth) {
+    x = pointer.x - menuRect.width - 1;
+  }
+
+  if (y + menuRect.height > window.innerHeight) {
+    y = pointer.y - menuRect.height - 1;
+  }
+
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
 
   setTimeout(() => {
     window.addEventListener("mousedown", handleCloseMenu);

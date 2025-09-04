@@ -30,20 +30,34 @@ function images() {
   const title = document.createElement("p");
   title.classList.add("title");
   title.textContent = "이미지";
-
   content.appendChild(title);
+
+  const openShareGalleryTab = document.createElement("div");
+  openShareGalleryTab.classList.add("template-manager-top");
+  content.appendChild(openShareGalleryTab);
+
+  const openShareGalleryButton = document.createElement("button");
+  openShareGalleryButton.classList.add("open-share-gallery-button", "btn_g");
+  openShareGalleryButton.textContent = "이미지 저장소 관리";
+  openShareGalleryButton.addEventListener("click", openShareGallery);
+  openShareGalleryTab.appendChild(openShareGalleryButton);
+
+  const imageUpload = document.createElement("div");
+  imageUpload.classList.add("drag-drop-input");
+  imageUpload.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+    <span>이미지 업로드</span>
+  `;
+  content.appendChild(imageUpload);
+
+  const imageGallery = document.createElement("div");
+  imageGallery.classList.add("image-grid");
+  content.appendChild(imageGallery);
+
   toolPanel.appendChild(content);
   document
     .querySelector(`${this.containerSelector} .main-panel`)
     .appendChild(toolPanel);
-
-  const imageUpload = document.createElement("div");
-  imageUpload.classList.add("drag-drop-input");
-  const uploadInput = document.createElement("div");
-  uploadInput.textContent =
-    "드래그앤 드롭하거나 클릭하여 이미지를 업로드하세요.";
-  imageUpload.appendChild(uploadInput);
-  content.appendChild(imageUpload);
 
   const dragDropInput = toolPanel.querySelector(".drag-drop-input");
   dragDropInput.addEventListener("click", function () {
@@ -85,20 +99,6 @@ function images() {
       }
     }
   });
-
-  const openShareGalleryTab = document.createElement("div");
-  openShareGalleryTab.classList.add("template-manager-top");
-  content.appendChild(openShareGalleryTab);
-
-  const openShareGalleryButton = document.createElement("button");
-  openShareGalleryButton.classList.add("open-share-gallery-button", "btn_g");
-  openShareGalleryButton.textContent = "이미지 저장소 관리";
-  openShareGalleryButton.addEventListener("click", openShareGallery);
-  openShareGalleryTab.appendChild(openShareGalleryButton);
-
-  const imageGallery = document.createElement("div");
-  imageGallery.classList.add("image-gallery");
-  content.appendChild(imageGallery);
 
   async function svgToPng(svgData) {
     try {
@@ -183,16 +183,21 @@ function images() {
       imageGallery.innerHTML = "";
       const myImages = ImageFileList.filter(
         (img) => img.usrId === currentUsr
-      ).sort((a, b) => b.registDate - a.registDate);
+      ).sort((a, b) => new Date(b.registDate) - new Date(a.registDate));
+
+      if (myImages.length === 0) {
+        imageGallery.innerHTML = `<p class="empty-gallery-message">업로드된 이미지가 없습니다.</p>`;
+        return;
+      }
 
       for (const [index, img] of myImages.entries()) {
         const button = document.createElement("div");
-        button.classList.add("image-wrapper");
+        button.classList.add("image-item");
         button.dataset.index = index;
         button.dataset.imgId = img.imgId;
 
         const imgElement = document.createElement("img");
-        imgElement.classList.add("gallery-image");
+        imgElement.classList.add("image-item-thumbnail");
 
         const imgData = await fetchImageData(img);
         if (imgData) {
@@ -208,28 +213,31 @@ function images() {
 
         button.appendChild(imgElement);
         button.addEventListener("click", async function () {
-          if (!imgData) {
+          const freshImgData = await fetchImageData(img);
+          if (!freshImgData) {
             console.error("이미지 데이터가 없습니다:", img);
+            alert("이미지를 캔버스에 추가하는데 실패했습니다.");
             return;
           }
 
           let blob =
-            img.type === "image/svg+xml" && !imgData.startsWith("data:")
-              ? new Blob([imgData], { type: "image/svg+xml" })
-              : await (await fetch(imgData)).blob();
+            img.type === "image/svg+xml" && !freshImgData.startsWith("data:")
+              ? new Blob([freshImgData], { type: "image/svg+xml" })
+              : await (await fetch(freshImgData)).blob();
 
           const file = new File([blob], img.fileNm, {
             type: img.type,
-            lastModified: img.registDate,
+            lastModified: new Date(img.registDate).getTime(),
           });
-          await processFiles([file]);
+          _self.canvas.isDrawingMode = false;
+          await processFiles([file], _self.canvas);
         });
 
         imageGallery.appendChild(button);
       }
     } catch (error) {
       console.error("갤러리 업데이트 실패:", error);
-      imageGallery.innerHTML = "";
+      imageGallery.innerHTML = `<p class="empty-gallery-message">이미지를 불러오는 데 실패했습니다.</p>`;
       alert("이미지 갤러리 업데이트에 실패했습니다.");
     }
   }
@@ -336,7 +344,7 @@ function images() {
     lastRenderedImages = [];
 
     const sortedImages = [...imageList].sort(
-      (a, b) => b.registDate - a.registDate
+      (a, b) => new Date(b.registDate) - new Date(a.registDate)
     );
 
     $("#pagination").pagination({

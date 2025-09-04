@@ -1,9 +1,14 @@
-import { ICONS } from "../models/featIcons.ts";
+import { ICONS } from "../models/Icons.ts";
 import { mapArea } from "../api/data/mapArea.js";
 import { setBackMapImg, getBackMapImg } from "../api/retBackMapUrl.js";
 import { resizeImg } from "../utils/resizeImg.js";
 import { load } from "../utils/saveEdit.js";
-import { getDeleteArea, getFilteredNoFocusObjects } from "../utils/utils.js";
+import { getFilteredNoFocusObjects } from "../utils/utils.js";
+import { startPicker } from "../utils/eyeDropper.ts";
+import {
+  initializeColorPicker,
+  initializeEyedropper,
+} from "../utils/drawingUtils.ts";
 
 let cachedKoreaGeoJSON = null;
 let cachedAsiaGeoJSON = null;
@@ -158,10 +163,18 @@ function canvasSettings() {
       `${this.containerSelector} .toolpanel#background-panel .content #color-picker`
     );
 
-    initializeColorPickerWithEyedropper(colorPicker, (color) => {
+    initializeColorPicker(colorPicker, (color) => {
       const hex = color ? color.toRgbString() : "transparent";
       _self.canvas.backgroundColor = hex;
       _self.canvas.renderAll();
+    });
+
+    initializeEyedropper(colorPicker, () => {
+      startPicker((selectedColor) => {
+        colorPicker.spectrum("set", selectedColor);
+        _self.canvas.backgroundColor = selectedColor;
+        _self.canvas.renderAll();
+      });
     });
 
     const bgPanelContent = document.querySelector(
@@ -519,9 +532,6 @@ function canvasSettings() {
         alert("이미지를 선택하세요");
         return;
       }
-      getDeleteArea().forEach((o) => {
-        _self.canvas.remove(o);
-      });
       URLToImage(imageBase64);
       _self.applyZoom(1);
     });
@@ -858,37 +868,6 @@ function canvasSettings() {
       selectedOptions = selectedOptions.filter((option) => option !== value);
     }
     setBackMapImg(selectedMapArea, selectedOptions);
-  }
-
-  function initializeColorPickerWithEyedropper(pickerElement, onColorChange) {
-    const spectrumOptions = {
-      showButtons: false,
-      type: "color",
-      showInput: true,
-      allowEmpty: true,
-      move: onColorChange,
-    };
-
-    pickerElement.spectrum(spectrumOptions);
-
-    if (window.EyeDropper) {
-      const eyedropperBtn = document.createElement("button");
-      eyedropperBtn.className = "eyedropper-btn";
-      eyedropperBtn.innerHTML = ICONS.eyeDrop;
-      pickerElement.parent().append(eyedropperBtn);
-
-      eyedropperBtn.addEventListener("click", async () => {
-        try {
-          const eyeDropper = new EyeDropper();
-          const result = await eyeDropper.open();
-          const newColor = tinycolor(result.sRGBHex);
-          pickerElement.spectrum("set", newColor);
-          onColorChange(newColor);
-        } catch (e) {
-          console.log("Color selection cancelled.");
-        }
-      });
-    }
   }
 
   initCanvasSizeSection();

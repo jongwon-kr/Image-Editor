@@ -6,7 +6,7 @@ import { imgEditor } from "../index.ts";
 
 function zoom() {
   const _self = imgEditor;
-  let currentZoomLevel = 1;
+  let currentZoomLevel = _self.canvas.getZoom() || 1;
 
   const footerbar = document.querySelector(
     `${imgEditor.containerSelector} #footer-bar`
@@ -61,18 +61,16 @@ function zoom() {
   };
 
   imgEditor.fitZoom = () => {
-    if (!_self.canvas.backgroundImage) {
-      _self.canvas.setWidth(_self.canvas.originalW * currentZoomLevel);
-      _self.canvas.setHeight(_self.canvas.originalH * currentZoomLevel);
-    } else {
-      _self.canvas.setWidth(
-        _self.canvas.backgroundImage.width * currentZoomLevel
-      );
-      _self.canvas.setHeight(
-        _self.canvas.backgroundImage.height * currentZoomLevel
-      );
-    }
     _self.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    if (!_self.canvas.backgroundImage) {
+      _self.canvas.setWidth(_self.canvas.originalW);
+      _self.canvas.setHeight(_self.canvas.originalH);
+    } else {
+      _self.canvas.originalW = _self.canvas.backgroundImage.width;
+      _self.canvas.originalH = _self.canvas.backgroundImage.height;
+      _self.canvas.setWidth(_self.canvas.backgroundImage.width);
+      _self.canvas.setHeight(_self.canvas.backgroundImage.height);
+    }
     _self.applyZoom(1);
   };
 
@@ -102,6 +100,7 @@ function zoom() {
     },
     { passive: false }
   );
+  imgEditor.updateInputFields();
 }
 
 export { zoom };

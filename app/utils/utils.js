@@ -268,12 +268,6 @@ function getOverlayImages() {
   return objects;
 }
 
-// 중첩자료 객체 추출
-function getDeleteArea() {
-  let objects = imgEditor.canvas.getObjects().filter((obj) => obj.isDelete);
-  return objects;
-}
-
 fabric.Object.prototype.toObject = (function (toObject) {
   return function (propertiesToInclude) {
     propertiesToInclude = propertiesToInclude || [];
@@ -287,7 +281,6 @@ fabric.Object.prototype.toObject = (function (toObject) {
       "overlayImage",
       "weatherFrontLineType",
       "isReflect",
-      "isDelete",
       "viewportTransform",
       "width",
       "height",
@@ -295,6 +288,8 @@ fabric.Object.prototype.toObject = (function (toObject) {
       "hasControls",
       "borderColor",
       "strokeUniform",
+      "isFreeDrawn",
+      "noFocusing",
     ]);
     return toObject.call(this, propertiesToInclude);
   };
@@ -315,7 +310,6 @@ function canvasToJsonData(data) {
     "overlayImage",
     "weatherFrontLineType",
     "isReflect",
-    "isDelete",
     "viewportTransform",
     "width",
     "height",
@@ -323,6 +317,8 @@ function canvasToJsonData(data) {
     "hasControls",
     "borderColor",
     "strokeUniform",
+    "isFreeDrawn",
+    "noFocusing",
   ]);
   return canvasJSON;
 }
@@ -368,8 +364,8 @@ function selectAllObjects(canvas) {
 function removeObjects(canvas) {
   if (canvas.getActiveObjects().length > 0) {
     const activeObjects = canvas.getActiveObjects();
-    canvas.discardActiveObject();
     activeObjects.forEach((obj) => canvas.remove(obj));
+    canvas.discardActiveObject();
     canvas.renderAll();
     canvas.fire("object:modified");
   }
@@ -385,7 +381,6 @@ export {
   getFilteredNoFocusObjects,
   getOverlayImages,
   canvasToJsonData,
-  getDeleteArea,
   groupObjects,
   ungroupObjects,
   selectAllObjects,

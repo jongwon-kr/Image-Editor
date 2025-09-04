@@ -84,6 +84,7 @@ function triangleDrawing(canvas) {
         triangle.set({ selectable: true });
         triangle.setCoords();
         canvas.setActiveObject(triangle);
+        canvas.fire("object:modified");
       }
     }
 

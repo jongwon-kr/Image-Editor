@@ -448,11 +448,11 @@ async function applyData(data) {
         }
       });
 
+      imgEditor.setActiveTool(imgEditor.activeTool);
       alert(`"${data.wkNm}" 데이터가 적용되었습니다.`);
       imgEditor.history.clear();
-
-      imgEditor.canvas.fire("object:modified");
       imgEditor.canvas.renderAll();
+      imgEditor.canvas.fire("object:modified");
     } catch (error) {
       console.error("데이터 적용 실패:", error);
       alert("데이터를 적용하는 데 실패했습니다.");

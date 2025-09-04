@@ -6,6 +6,7 @@ export class PolyPath extends fabric.Path {
   }
 
   isEditing = false;
+  isSmoothing = false;
   tempControls = null;
 
   constructor(path, options = {}) {
@@ -37,6 +38,7 @@ export class PolyPath extends fabric.Path {
     this._setupPathControls();
     this.setCoords();
 
+    this.canvas.preserveObjectStacking = false;
     this.canvas?.setActiveObject(this);
     this.canvas?.renderAll();
   }
@@ -47,6 +49,13 @@ export class PolyPath extends fabric.Path {
     this.controls = this.tempControls;
 
     this.setCoords();
+
+    this.canvas.preserveObjectStacking = true;
+    const activeObject = this.canvas.getActiveObject();
+    this.canvas.discardActiveObject();
+    if (activeObject) {
+      this.canvas.setActiveObject(activeObject);
+    }
     this.canvas?.renderAll();
   }
 
@@ -70,45 +79,145 @@ export class PolyPath extends fabric.Path {
     };
   }
 
-  convertToCurve() {
-    if (!this.path || this.path.length < 2) return;
-
-    const newPath = [this.path[0]];
-
-    for (let i = 1; i < this.path.length; i++) {
-      const prevSegment = newPath[newPath.length - 1];
-      const currentSegment = this.path[i];
-
-      if (currentSegment[0] === "L") {
-        const startX =
-          prevSegment[0] === "M"
-            ? prevSegment[1]
-            : prevSegment[prevSegment.length - 2];
-        const startY =
-          prevSegment[0] === "M"
-            ? prevSegment[2]
-            : prevSegment[prevSegment.length - 1];
-
-        const endX = currentSegment[1];
-        const endY = currentSegment[2];
-
-        const midX = (startX + endX) / 2;
-        const midY = (startY + endY) / 2;
-
-        newPath.push(["Q", midX, midY, endX, endY]);
-      } else {
-        newPath.push(currentSegment);
-      }
+  toggleSmoothing() {
+    if (this.isSmoothing) {
+      this.straighten();
+    } else {
+      this.smoothing();
     }
+  }
 
-    this.path = newPath;
+  straighten() {
+    if (!this.isSmoothing) return;
+
+    const straightPath = this._getStraightPath();
+    if (straightPath.length < 2) return;
+
+    const anchorPoint = new fabric.Point(this.path[0][1], this.path[0][2]);
+    const anchorPointInCanvasPlane = fabric.util.transformPoint(
+      anchorPoint.subtract(this.pathOffset),
+      this.calcTransformMatrix()
+    );
+
+    this.set("path", straightPath);
+    this.setDimensions();
+
+    const newAnchorPointInCanvasPlane = fabric.util.transformPoint(
+      new fabric.Point(this.path[0][1], this.path[0][2]).subtract(
+        this.pathOffset
+      ),
+      this.calcTransformMatrix()
+    );
+    const diff = newAnchorPointInCanvasPlane.subtract(anchorPointInCanvasPlane);
+    this.set({ left: this.left - diff.x, top: this.top - diff.y });
+
+    this.isSmoothing = false;
     this.dirty = true;
-
     if (this.isEditing) {
       this._setupPathControls();
     }
-
     this.setCoords();
+    this.canvas?.renderAll();
+    this.canvas.fire("object:modified");
+  }
+
+  smoothing() {
+    const straightPath = this._getStraightPath();
+    if (straightPath.length < 3) {
+      return;
+    }
+
+    this.isSmoothing = true;
+
+    const anchorPoint = new fabric.Point(this.path[0][1], this.path[0][2]);
+    const anchorPointInCanvasPlane = fabric.util.transformPoint(
+      anchorPoint.subtract(this.pathOffset),
+      this.calcTransformMatrix()
+    );
+
+    let points = straightPath.map((p) => ({
+      x: p[p.length - 2],
+      y: p[p.length - 1],
+    }));
+
+    const isClosed =
+      Math.abs(points[0].x - points[points.length - 1].x) < 1 &&
+      Math.abs(points[0].y - points[points.length - 1].y) < 1;
+
+    if (isClosed) {
+      points.pop();
+    }
+
+    const newPath = [];
+    newPath.push(["M", points[0].x, points[0].y]);
+    const tension = 0.2;
+
+    for (let i = 0; i < points.length; i++) {
+      const p1 = points[i];
+      const p2 = points[i + 1];
+
+      if (!p2) {
+        break;
+      }
+
+      let p0, p3;
+      if (i === 0) {
+        p0 = points[points.length - 1];
+      } else {
+        p0 = points[i - 1];
+      }
+
+      if (i >= points.length - 2) {
+        p3 = points[(i + 2) % points.length];
+      } else {
+        p3 = points[i + 2];
+      }
+
+      const cp1 = {
+        x: p1.x + (p2.x - p0.x) * tension,
+        y: p1.y + (p2.y - p0.y) * tension,
+      };
+      const cp2 = {
+        x: p2.x - (p3.x - p1.x) * tension,
+        y: p2.y - (p3.y - p1.y) * tension,
+      };
+      newPath.push(["C", cp1.x, cp1.y, cp2.x, cp2.y, p2.x, p2.y]);
+    }
+
+    const p1 = points[points.length - 1];
+    const p2 = points[0];
+    const p0 = points[points.length - 2];
+    const p3 = points[1];
+
+    const cp1 = {
+      x: p1.x + (p2.x - p0.x) * tension,
+      y: p1.y + (p2.y - p0.y) * tension,
+    };
+    const cp2 = {
+      x: p2.x - (p3.x - p1.x) * tension,
+      y: p2.y - (p3.y - p1.y) * tension,
+    };
+    newPath.push(["C", cp1.x, cp1.y, cp2.x, cp2.y, p2.x, p2.y]);
+
+    this.set("path", newPath);
+    this.setDimensions();
+
+    const newAnchorPointInCanvasPlane = fabric.util.transformPoint(
+      new fabric.Point(this.path[0][1], this.path[0][2]).subtract(
+        this.pathOffset
+      ),
+      this.calcTransformMatrix()
+    );
+    const diff = newAnchorPointInCanvasPlane.subtract(anchorPointInCanvasPlane);
+    this.set({ left: this.left - diff.x, top: this.top - diff.y });
+
+    this.dirty = true;
+    if (this.isEditing) {
+      this._setupPathControls();
+    }
+    this.setCoords();
+    this.canvas?.renderAll();
+    this.canvas.fire("object:modified");
   }
 
   /**
@@ -120,6 +229,7 @@ export class PolyPath extends fabric.Path {
       ...super.toObject(propertiesToInclude),
       id: this.id,
       name: this.name,
+      isSmoothing: this.isSmoothing,
     };
   }
 
@@ -156,58 +266,48 @@ export class PolyPath extends fabric.Path {
     }
 
     if (insertionIndex !== -1) {
-      const anchorSegment = this.path[0];
-      const anchorPoint = new fabric.Point(
-        anchorSegment[anchorSegment.length - 2],
-        anchorSegment[anchorSegment.length - 1]
-      );
-      const anchorPointInCanvasPlane = fabric.util.transformPoint(
-        anchorPoint.subtract(this.pathOffset),
-        this.calcTransformMatrix()
-      );
+      if (this.isSmoothing) {
+        straightPath.splice(insertionIndex, 0, [
+          "L",
+          localPointer.x,
+          localPointer.y,
+        ]);
+        this.set("path", straightPath);
+        this.smoothing();
+      } else {
+        const anchorPoint = new fabric.Point(this.path[0][1], this.path[0][2]);
+        const anchorPointInCanvasPlane = fabric.util.transformPoint(
+          anchorPoint.subtract(this.pathOffset),
+          this.calcTransformMatrix()
+        );
 
-      const prevSegment = this.path[insertionIndex - 1];
-      const startX =
-        prevSegment[0] === "M"
-          ? prevSegment[1]
-          : prevSegment[prevSegment.length - 2];
-      const startY =
-        prevSegment[0] === "M"
-          ? prevSegment[2]
-          : prevSegment[prevSegment.length - 1];
-      const originalSegment = this.path[insertionIndex];
-      const endX = originalSegment[originalSegment.length - 2];
-      const endY = originalSegment[originalSegment.length - 1];
-      const newX = localPointer.x;
-      const newY = localPointer.y;
-      const midX1 = (startX + newX) / 2;
-      const midY1 = (startY + newY) / 2;
-      const newSegment1 = ["Q", midX1, midY1, newX, newY];
-      const midX2 = (newX + endX) / 2;
-      const midY2 = (newY + endY) / 2;
-      const newSegment2 = ["Q", midX2, midY2, endX, endY];
+        const newPath = [...this.path];
+        newPath.splice(insertionIndex, 0, [
+          "L",
+          localPointer.x,
+          localPointer.y,
+        ]);
 
-      const newPath = [...this.path];
-      newPath.splice(insertionIndex, 1, newSegment1, newSegment2);
+        this.set("path", newPath);
+        this.setDimensions();
 
-      this.set("path", newPath);
-      this.setDimensions();
-      this._setupPathControls();
+        const newAnchorPointInCanvasPlane = fabric.util.transformPoint(
+          new fabric.Point(this.path[0][1], this.path[0][2]).subtract(
+            this.pathOffset
+          ),
+          this.calcTransformMatrix()
+        );
+        const diff = newAnchorPointInCanvasPlane.subtract(
+          anchorPointInCanvasPlane
+        );
+        this.set({ left: this.left - diff.x, top: this.top - diff.y });
 
-      const newAnchorPointInCanvasPlane = fabric.util.transformPoint(
-        anchorPoint.subtract(this.pathOffset),
-        this.calcTransformMatrix()
-      );
-      const diff = newAnchorPointInCanvasPlane.subtract(
-        anchorPointInCanvasPlane
-      );
-      this.set({
-        left: this.left - diff.x,
-        top: this.top - diff.y,
-      });
-      this.setCoords();
-      this.canvas?.renderAll();
-      this.canvas?.fire("object:modified", { target: this });
+        this.dirty = true;
+        if (this.isEditing) this._setupPathControls();
+        this.setCoords();
+        this.canvas?.renderAll();
+        this.canvas.fire("object:modified");
+      }
     }
   }
 
@@ -215,8 +315,9 @@ export class PolyPath extends fabric.Path {
    * @param {fabric.Point} pointer
    */
   removePoint(pointer) {
-    if (!this.isEditing || !this.path || this.path.length <= 2) return;
+    if (!this.isEditing || !this.path || this.path.length <= 3) return;
 
+    const straightPath = this._getStraightPath();
     let minDistance = Infinity;
     let removalIndex = -1;
 
@@ -227,12 +328,13 @@ export class PolyPath extends fabric.Path {
     localPointer.x += this.pathOffset.x;
     localPointer.y += this.pathOffset.y;
 
-    for (let i = 0; i < this.path.length; i++) {
-      const segment = this.path[i];
-      const pointX = segment[segment.length - 2];
-      const pointY = segment[segment.length - 1];
-      const controlPoint = new fabric.Point(pointX, pointY);
-      const distance = localPointer.distanceFrom(controlPoint);
+    for (let i = 0; i < straightPath.length; i++) {
+      const segment = straightPath[i];
+      const point = new fabric.Point(
+        segment[segment.length - 2],
+        segment[segment.length - 1]
+      );
+      const distance = localPointer.distanceFrom(point);
 
       if (distance < minDistance) {
         minDistance = distance;
@@ -240,60 +342,58 @@ export class PolyPath extends fabric.Path {
       }
     }
 
-    if (removalIndex !== -1 && minDistance <= 5) {
-      const anchorIndex = removalIndex === 0 ? 1 : 0;
-      const anchorSegment = this.path[anchorIndex];
-      const anchorPoint = new fabric.Point(
-        anchorSegment[anchorSegment.length - 2],
-        anchorSegment[anchorSegment.length - 1]
-      );
-      const anchorPointInCanvasPlane = fabric.util.transformPoint(
-        anchorPoint.subtract(this.pathOffset),
-        this.calcTransformMatrix()
-      );
-
-      const newPath = [...this.path];
-      if (removalIndex === 0 && newPath.length > 2) {
-        const nextPointSegment = newPath[1];
-        const newStartPoint = [
-          "M",
-          nextPointSegment[nextPointSegment.length - 2],
-          nextPointSegment[nextPointSegment.length - 1],
-        ];
-        newPath.splice(0, 2, newStartPoint);
-      } else if (removalIndex === newPath.length - 1) {
-        newPath.pop();
+    if (removalIndex !== -1 && minDistance <= 10) {
+      if (this.isSmoothing) {
+        straightPath.splice(removalIndex, 1);
+        if (removalIndex === 0 && straightPath.length > 0) {
+          const nextPoint = straightPath[0];
+          straightPath[0] = [
+            "M",
+            nextPoint[nextPoint.length - 2],
+            nextPoint[nextPoint.length - 1],
+          ];
+        }
+        this.set("path", straightPath);
+        this.smoothing();
       } else {
-        const prevSegment = newPath[removalIndex - 1];
-        const nextSegment = newPath[removalIndex + 1];
-        const startX = prevSegment[prevSegment.length - 2];
-        const startY = prevSegment[prevSegment.length - 1];
-        const endX = nextSegment[nextSegment.length - 2];
-        const endY = nextSegment[nextSegment.length - 1];
-        const midX = (startX + endX) / 2;
-        const midY = (startY + endY) / 2;
-        const newSegment = ["Q", midX, midY, endX, endY];
-        newPath.splice(removalIndex, 2, newSegment);
+        const anchorPoint = new fabric.Point(this.path[0][1], this.path[0][2]);
+        const anchorPointInCanvasPlane = fabric.util.transformPoint(
+          anchorPoint.subtract(this.pathOffset),
+          this.calcTransformMatrix()
+        );
+
+        const newPath = [...this.path];
+        newPath.splice(removalIndex, 1);
+
+        if (removalIndex === 0 && newPath.length > 0) {
+          const nextPoint = newPath[0];
+          newPath[0] = [
+            "M",
+            nextPoint[nextPoint.length - 2],
+            nextPoint[nextPoint.length - 1],
+          ];
+        }
+
+        this.set("path", newPath);
+        this.setDimensions();
+
+        const newAnchorPointInCanvasPlane = fabric.util.transformPoint(
+          new fabric.Point(this.path[0][1], this.path[0][2]).subtract(
+            this.pathOffset
+          ),
+          this.calcTransformMatrix()
+        );
+        const diff = newAnchorPointInCanvasPlane.subtract(
+          anchorPointInCanvasPlane
+        );
+        this.set({ left: this.left - diff.x, top: this.top - diff.y });
+
+        this.dirty = true;
+        if (this.isEditing) this._setupPathControls();
+        this.setCoords();
+        this.canvas?.renderAll();
+        this.canvas.fire("object:modified");
       }
-
-      this.set("path", newPath);
-      this.setDimensions();
-      this._setupPathControls();
-
-      const newAnchorPointInCanvasPlane = fabric.util.transformPoint(
-        anchorPoint.subtract(this.pathOffset),
-        this.calcTransformMatrix()
-      );
-      const diff = newAnchorPointInCanvasPlane.subtract(
-        anchorPointInCanvasPlane
-      );
-      this.set({
-        left: this.left - diff.x,
-        top: this.top - diff.y,
-      });
-      this.setCoords();
-      this.canvas?.renderAll();
-      this.canvas.fire("object:modified");
     }
   }
 
@@ -307,12 +407,12 @@ export class PolyPath extends fabric.Path {
 
     for (const segment of this.path) {
       const command = segment[0];
-      if (command === "M") {
+      if (command === "M" || command === "L") {
         straightPath.push(segment);
       } else if (command === "Q") {
         straightPath.push(["L", segment[3], segment[4]]);
-      } else {
-        straightPath.push(segment);
+      } else if (command === "C") {
+        straightPath.push(["L", segment[5], segment[6]]);
       }
     }
     return straightPath;
