@@ -4,7 +4,7 @@
 ### 📂 구조
 - ES Module(import, export) ES6
 #### 주요 파일
-- `index.js` : 엔트리 파일 (앱 초기화 및 모듈 로딩) ImageEditor 클래스 생성
+- `index.ts` : 엔트리 파일 (앱 초기화 및 모듈 로딩) ImageEditor 클래스 생성
 - `core.js` : 프로젝트의 초기 설정 및 환경 구성 파일 ImageEditor 클래스 export
 
 #### 폴더 설명
@@ -23,7 +23,7 @@
 
 - **jQuery v3.5.1**: DOM 조작 및 이벤트 처리
 - **jQuery spectrum-colorpicker2**: 색상 선택기
-- **Fabric.js v5.3.0**: HTML5 캔버스 작업을 위한 그래픽 라이브러리
+- **Fabric.js v6.4.1**: HTML5 캔버스 작업을 위한 그래픽 라이브러리
 - **grapick v0.1.7**:  그라데이션 색 선택기 (그리기 기능에 유용한 라이브러리)
 - **undo-redo-stack**: 작업 취소 및 다시 실행을 위한 스택 관리 라이브러리
 
