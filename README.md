@@ -32,3 +32,8 @@
 ### 📜 사용법
 git clone -> npm install -> npm run start : 웹팩을 통해 서버 실행
 git clone -> npm install -> npm run build : 웹팩을 통해 빌드
+
+#### 빌드 모드
+npm run build -> default
+npm run build:simple -> simple
+npm run build:pro -> pro
