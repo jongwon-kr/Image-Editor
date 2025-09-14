@@ -8,7 +8,8 @@
 - `core.js` : 프로젝트의 초기 설정 및 환경 구성 파일 ImageEditor 클래스 export
 
 #### 폴더 설명
-- `app/assets/` : 이미지, SVG, 아이콘 등 리소스
+- `app/assets/` : 이미지, SVG, 아이콘 등 리소스 데이터
+- `app/model/` : ts 타입 선언이나 자료형 선언 등 리소스 데이터
 - `app/api/` : 외부 API 호출 관련 폴더
 - `app/styles/` : CSS 파일
 - `app/drawing-tools/` : 그림 그리기 관련 모듈 (Line, Path, Text 등)
