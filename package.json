@@ -3,11 +3,13 @@
     "type": "module",
     "scripts": {
         "start": "webpack serve --open",
-        "build": "webpack && npm run copyjs && npm run copycss",
-        "build:simple": "webpack --config webpack.config.mjs --env mode=simple",
-        "build:default": "webpack --config webpack.config.mjs --env mode=default",
-        "build:pro": "webpack --config webpack.config.mjs --env mode=pro",
-        "copyjs": "copy .\\dist\\*.js* C:\\KAF\\workspace_afs\\afs2-ias\\src\\main\\resources\\static\\js\\wgc\\",
+        "build": "webpack && npm run defaultCopyJs && npm run copycss",
+        "build:simple": "webpack --env mode=simple && npm run simpleCopyJs && npm run copycss",
+        "build:default": "webpack --env mode=default && npm run defaultCopyJs && npm run copycss",
+        "build:pro": "webpack --env mode=pro && npm run proCopyJs && npm run copycss",
+        "defaultCopyJs": "copy .\\dist\\*-default.js* C:\\KAF\\workspace_afs\\afs2-ias\\src\\main\\resources\\static\\js\\wgc\\",
+        "simpleCopyJs": "copy .\\dist\\*-simple.js* C:\\KAF\\workspace_afs\\afs2-ias\\src\\main\\resources\\static\\js\\wgc\\",
+        "proCopyJs": "copy .\\dist\\*-pro.js* C:\\KAF\\workspace_afs\\afs2-ias\\src\\main\\resources\\static\\js\\wgc\\",
         "copycss": "copy .\\dist\\*.css* C:\\KAF\\workspace_afs\\afs2-ias\\src\\main\\resources\\static\\css\\wgc\\"
     },
     "devDependencies": {

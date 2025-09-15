@@ -1,9 +1,10 @@
 import { ImageEditor } from "./core.js";
 import "./styles/style.css";
 
-import { UserImage } from "models/UserImage.js";
-import { Template } from "models/Template.js";
-import { EditData } from "models/EditData.js";
+import { UserImage } from "models/UserImage.ts";
+import { Template } from "models/Template.ts";
+import { EditData } from "models/EditData.ts";
+import { defaultButtons, simpleButtons, proButtons } from "./initConfig.ts";
 
 if (typeof fabric === "undefined") {
   console.error(
@@ -32,36 +33,14 @@ if (loadCanvasData) {
   }
 }
 
-const buttons = [
-  "select",
-  "hand",
-  "cut",
-  "colorFilter",
-  "ellipse",
-  "triangle",
-  "rect",
-  "shapes",
-  "draw",
-  "curvedLine",
-  "arrow",
-  "path",
-  "weatherFrontLine",
-  "ctextbox",
-  "weatherData",
-  "images",
-  "templates",
-  "background",
-  "fullscreen",
-  "help",
-  "undo",
-  "redo",
-  "save",
-  "import",
-  "export",
-  "download",
-  "clear",
-  // "test",
-];
+let buttons: string[];
+if (process.env.APP_MODE === "simple") {
+  buttons = simpleButtons;
+} else if (process.env.APP_MODE === "pro") {
+  buttons = proButtons;
+} else {
+  buttons = defaultButtons;
+}
 
 const shapes: string[] = [];
 const images: UserImage[] = [];

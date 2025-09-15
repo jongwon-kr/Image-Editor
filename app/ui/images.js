@@ -5,6 +5,7 @@ import {
   saveWgcImg,
   deleteWgcImg,
   getFileData,
+  updateWgcImg,
 } from "../api/wgcApiService.js";
 import { processFiles } from "../utils/processFile.js";
 
@@ -275,7 +276,10 @@ function images() {
 
     categories.forEach((category) => {
       const selectCategoryButton = document.createElement("button");
-      selectCategoryButton.classList.add("toggle-switch-btn", "btn_w");
+      selectCategoryButton.classList.add(
+        "toggle-switch-btn",
+        "modal-toggle-btn"
+      );
       selectCategoryButton.textContent = category.label;
       selectCategoryButton.id = category.name;
       selectCategoryButton.addEventListener("click", async (e) => {
@@ -625,8 +629,8 @@ function images() {
           if (!imgData) {
             throw new Error("이미지 데이터를 가져올 수 없습니다.");
           }
-          await deleteWgcImg({ imgId: img.imgId });
-          await saveWgcImg({ ...img, imgData, shareYn: "Y" });
+          console.log("공유", imgData);
+          await updateWgcImg({ ...img, imgData });
           imageDataCache.set(img.imgId, imgData);
           await updateImageGallery();
           await renderFilteredImages();
@@ -642,8 +646,8 @@ function images() {
           if (!imgData) {
             throw new Error("이미지 데이터를 가져올 수 없습니다.");
           }
-          await deleteWgcImg({ imgId: img.imgId });
-          await saveWgcImg({ ...img, imgData, shareYn: "N" });
+          console.log("공유 해제", imgData);
+          await updateWgcImg({ ...img, imgData });
           imageDataCache.set(img.imgId, imgData);
           await updateImageGallery();
           await renderFilteredImages();

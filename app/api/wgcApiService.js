@@ -19,6 +19,52 @@ function hideLoader() {
   loader.style.display = "none";
 }
 
+// 파일 데이터 조회
+async function getFileData(data) {
+  const url = `${baseUrlNoRest}/data`;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-CSRF-TOKEN": csrfToken,
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    return await response.json();
+  } catch (error) {
+    console.error("파일 데이터 조회 실패:", error);
+    throw error;
+  }
+}
+
+// 기본 템플릿 관리자 인증
+async function accessDefaultTmplt(data) {
+  const url = `${baseUrl}/accessDefaultTmpltCmd.json`;
+  try {
+    showLoader();
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-CSRF-TOKEN": csrfToken,
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("관리자 인증 실패:", error);
+    throw error;
+  } finally {
+    hideLoader();
+  }
+}
+
 // 이미지 조회
 async function retWgcImg() {
   const url = `${baseUrl}/retWgcImgCmd.json`;
@@ -90,12 +136,13 @@ async function deleteWgcImg(data) {
   }
 }
 
-// 파일 데이터 조회
-async function getFileData(data) {
-  const url = `${baseUrlNoRest}/data`;
+// 이미지 수정
+async function updateWgcImg(data) {
+  const url = `${baseUrl}/updateWgcImgCmd.json`;
   try {
+    showLoader();
     const response = await fetch(url, {
-      method: "POST",
+      method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -107,8 +154,10 @@ async function getFileData(data) {
 
     return await response.json();
   } catch (error) {
-    console.error("파일 데이터 조회 실패:", error);
+    console.error("이미지 공유 실패:", error);
     throw error;
+  } finally {
+    hideLoader();
   }
 }
 
@@ -177,6 +226,31 @@ async function deleteWgcTmplt(data) {
     return await response.json();
   } catch (error) {
     console.error("템플릿 삭제 실패:", error);
+    throw error;
+  } finally {
+    hideLoader();
+  }
+}
+
+// 템플릿 수정
+async function updateWgcTmplt(data) {
+  const url = `${baseUrl}/updateWgcTmpltCmd.json`;
+  try {
+    showLoader();
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-CSRF-TOKEN": csrfToken,
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    return await response.json();
+  } catch (error) {
+    console.error("이미지 공유 실패:", error);
     throw error;
   } finally {
     hideLoader();
@@ -254,15 +328,44 @@ async function deleteWgcEdit(data) {
   }
 }
 
+// 편집 수정
+async function updateWgcEdit(data) {
+  const url = `${baseUrl}/updateWgcEditCmd.json`;
+  try {
+    showLoader();
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-CSRF-TOKEN": csrfToken,
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    return await response.json();
+  } catch (error) {
+    console.error("이미지 공유 실패:", error);
+    throw error;
+  } finally {
+    hideLoader();
+  }
+}
+
 export {
   retWgcImg,
   saveWgcImg,
   deleteWgcImg,
+  updateWgcImg,
   retWgcTmplt,
   saveWgcTmplt,
   deleteWgcTmplt,
+  updateWgcTmplt,
   retWgcEdit,
   saveWgcEdit,
   deleteWgcEdit,
+  updateWgcEdit,
   getFileData,
+  accessDefaultTmplt,
 };

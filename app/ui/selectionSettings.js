@@ -232,8 +232,8 @@ function selectionSettings() {
           <div class="input-container"><label>색상</label>
             <input id="border-color-picker" value="transparent">
           </div>
-        </div>
         <div class="horizontal-line"></div>
+        </div>
         <div class="textbox-border-settings">
           <h4>텍스트 박스 테두리 설정</h4>
             <div class="input-container"><label>두께</label>
@@ -515,7 +515,7 @@ function selectionSettings() {
     textBorderDecreaseBtn.addEventListener("click", function () {
       if (!_self.activeSelection || _self.activeSelection.type !== "ctextbox")
         return;
-      let value = parseInt(borderWidthInput.value) - 1;
+      let value = parseInt(borderWidthInput.value);
       if (value < parseInt(borderWidthInput.min))
         value = parseInt(borderWidthInput.min);
       borderWidthInput.value = value;
@@ -528,7 +528,7 @@ function selectionSettings() {
     textBorderIncreaseBtn.addEventListener("click", function () {
       if (!_self.activeSelection || _self.activeSelection.type !== "ctextbox")
         return;
-      let value = parseInt(borderWidthInput.value) + 1;
+      let value = parseInt(borderWidthInput.value);
       borderWidthInput.value = value;
       setActiveFontStyle(_self.activeSelection, "strokeWidth", value);
       _self.canvas.fire("object:modified");
@@ -586,7 +586,7 @@ function selectionSettings() {
     textboxBorderDecreaseBtn.addEventListener("click", function () {
       if (!_self.activeSelection || _self.activeSelection.type !== "ctextbox")
         return;
-      let value = parseInt(textboxBorderWidthInput.value) - 1;
+      let value = parseInt(textboxBorderWidthInput.value);
       if (value < parseInt(textboxBorderWidthInput.min))
         value = parseInt(textboxBorderWidthInput.min);
       textboxBorderWidthInput.value = value;
@@ -599,7 +599,7 @@ function selectionSettings() {
     textboxBorderIncreaseBtn.addEventListener("click", function () {
       if (!_self.activeSelection || _self.activeSelection.type !== "ctextbox")
         return;
-      let value = parseInt(textboxBorderWidthInput.value) + 1;
+      let value = parseInt(textboxBorderWidthInput.value);
       textboxBorderWidthInput.value = value;
       _self.activeSelection.set("textboxBorderWidth", value);
       _self.canvas.fire("object:modified");
@@ -1194,12 +1194,12 @@ function selectionSettings() {
           <h4>개체 복사/삭제</h4>
           <button data-title="복제" id="duplicate"><svg id="Capa_1" x="0px" y="0px" viewBox="0 0 512 512" xml:space="preserve"><g><g><g><path d="M42.667,256c0-59.52,35.093-110.827,85.547-134.827V75.2C53.653,101.44,0,172.48,0,256s53.653,154.56,128.213,180.8 v-45.973C77.76,366.827,42.667,315.52,42.667,256z"></path><path d="M320,64c-105.92,0-192,86.08-192,192s86.08,192,192,192s192-86.08,192-192S425.92,64,320,64z M320,405.333 c-82.347,0-149.333-66.987-149.333-149.333S237.653,106.667,320,106.667S469.333,173.653,469.333,256 S402.347,405.333,320,405.333z"></path><polygon points="341.333,170.667 298.667,170.667 298.667,234.667 234.667,234.667 234.667,277.333 298.667,277.333 298.667,341.333 341.333,341.333 341.333,277.333 405.333,277.333 405.333,234.667 341.333,234.667  "></polygon></g></g></g></svg></button>
           <button data-title="삭제" id="delete"><svg id="Layer_1" x="0px" y="0px" viewBox="0 0 512 512" xml:space="preserve"><g><g><path fill="red" d="M425.298,51.358h-91.455V16.696c0-9.22-7.475-16.696-16.696-16.696H194.855c-9.22,0-16.696,7.475-16.696,16.696v34.662 H86.704c-9.22,0-16.696,7.475-16.696,16.696v51.357c0,9.22,7.475,16.696,16.696,16.696h5.072l15.26,359.906 c0.378,8.937,7.735,15.988,16.68,15.988h264.568c8.946,0,16.302-7.051,16.68-15.989l15.259-359.906h5.073 c9.22,0,16.696-7.475,16.696-16.696V68.054C441.994,58.832,434.519,51.358,425.298,51.358z M211.551,33.391h88.9v17.967h-88.9 V33.391z M372.283,478.609H139.719l-14.522-342.502h261.606L372.283,478.609z M408.602,102.715c-15.17,0-296.114,0-305.202,0 V84.749h305.202V102.715z"></path></g></g><g><g><path fill="red" d="M188.835,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C205.53,194.779,198.055,187.304,188.835,187.304z"></path></g></g><g><g><path fill="red" d="M255.998,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.474,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C272.693,194.779,265.218,187.304,255.998,187.304z"></path></g></g><g><g><path fill="red" d="M323.161,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 s16.696-7.475,16.696-16.696V204C339.857,194.779,332.382,187.304,323.161,187.304z"></path></g></g></svg></button>
-          <h4>개체 순서</h4>
-          <button data-title="앞으로 가져오기" id="bring-fwd"><svg x="0px" y="0px" viewBox="0 0 1000 1000" enable-background="new 0 0 1000 1000" xml:space="preserve"><g><path d="M10,10h686v686H10V10 M990,304v686H304V794h98v98h490V402h-98v-98H990z"></path></g></svg></button>
-          <button data-title="뒤로 보내기" id="bring-back"><svg enable-background="new 0 0 1000 1000" viewBox="0 0 1e3 1e3" xml:space="preserve"><path d="m990 990h-686v-686h686v686m-980-294v-686h686v680h-98v-582h-490v490h200v98z"></path><rect x="108.44" y="108" width="490" height="490" fill="#fff"></rect></svg></button>
           <h4 id="object-flip">개체 대칭</h4>
           <button data-title="좌우 대칭" id="flip-h"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#000000"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <rect x="0" fill="none" width="24" height="24"></rect> <g> <path d="M18 4h-5V1h-2v3H6c-1.105 0-2 .895-2 2v12c0 1.105.895 2 2 2h5v3h2v-3h5c1.105 0 2-.895 2-2V6c0-1.105-.895-2-2-2zM6 18V6h5v12H6z"></path> </g> </g></svg></button>
           <button data-title="상하 대칭" id="flip-v"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#000000"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <rect x="0" fill="none" width="24" height="24"></rect> <g> <path d="M20 18v-5h3v-2h-3V6c0-1.105-.895-2-2-2H6c-1.105 0-2 .895-2 2v5H1v2h3v5c0 1.105.895 2 2 2h12c1.105 0 2-.895 2-2zM6 6h12v5H6V6z"></path> </g> </g></svg></button>
+          <h4>개체 순서</h4>
+          <button data-title="앞으로 가져오기" id="bring-fwd"><svg x="0px" y="0px" viewBox="0 0 1000 1000" enable-background="new 0 0 1000 1000" xml:space="preserve"><g><path d="M10,10h686v686H10V10 M990,304v686H304V794h98v98h490V402h-98v-98H990z"></path></g></svg></button>
+          <button data-title="뒤로 보내기" id="bring-back"><svg enable-background="new 0 0 1000 1000" viewBox="0 0 1e3 1e3" xml:space="preserve"><path d="m990 990h-686v-686h686v686m-980-294v-686h686v680h-98v-582h-490v490h200v98z"></path><rect x="108.44" y="108" width="490" height="490" fill="#fff"></rect></svg></button>
           <h4>개체 그룹</h4>
           <button data-title="그룹화" id="group"><svg width="248" height="249" viewBox="0 0 248 249"><g><rect fill="none" id="canvas_background" height="251" width="250" y="-1" x="-1"></rect><g display="none" overflow="visible" y="0" x="0" height="100%" width="100%" id="canvasGrid"><rect fill="url(#gridpattern)" stroke-width="0" y="0" x="0" height="100%" width="100%"></rect></g></g><g><rect id="svg_1" height="213.999997" width="213.999997" y="18.040149" x="16.8611" stroke-width="14" stroke="#000" fill="none"></rect><ellipse ry="39.5" rx="39.5" id="svg_2" cy="87.605177" cx="90.239139" stroke-opacity="null" stroke-width="5" stroke="#000" fill="#000000"></ellipse><rect id="svg_3" height="61.636373" width="61.636373" y="135.606293" x="133.750604" stroke-opacity="null" stroke-width="5" stroke="#000" fill="#000000"></rect><rect id="svg_4" height="26.016205" width="26.016205" y="4.813006" x="3.999997" stroke-opacity="null" stroke-width="8" stroke="#000" fill="#000000"></rect><rect id="svg_5" height="26.016205" width="26.016205" y="3.999999" x="217.820703" stroke-opacity="null" stroke-width="8" stroke="#000" fill="#000000"></rect><rect id="svg_7" height="26.016205" width="26.016205" y="218.633712" x="3.999997" stroke-opacity="null" stroke-width="8" stroke="#000" fill="#000000"></rect><rect id="svg_8" height="26.016205" width="26.016205" y="218.633712" x="217.820694" stroke-opacity="null" stroke-width="8" stroke="#000" fill="#000000"></rect></g></svg></button>
           <button data-title="그룹 해제" id="ungroup"><svg width="247.99999999999997" height="248.99999999999997" viewBox="0 0 248 249"><g><rect fill="none" id="canvas_background" height="251" width="250" y="-1" x="-1"></rect><g display="none" overflow="visible" y="0" x="0" height="100%" width="100%" id="canvasGrid"><rect fill="url(#gridpattern)" stroke-width="0" y="0" x="0" height="100%" width="100%"></rect></g></g><g><rect stroke-dasharray="20" id="svg_1" height="213.999997" width="213.999997" y="18.040149" x="16.8611" stroke-width="16" stroke="#000" fill="none"></rect><ellipse ry="39.5" rx="39.5" id="svg_2" cy="87.605177" cx="90.239139" stroke-opacity="null" stroke-width="5" stroke="#000" fill="#000000"></ellipse><rect id="svg_3" height="61.636373" width="61.636373" y="135.606293" x="133.750604" stroke-opacity="null" stroke-width="5" stroke="#000" fill="#000000"></rect></g></svg></button>
@@ -1322,18 +1322,21 @@ function selectionSettings() {
     const weatherFrontLineSection = document.querySelector(
       `${this.containerSelector} .toolpanel#select-panel .weatherFrontLine-section`
     );
-    const neonSection = document.querySelector(
-      `${this.containerSelector} .toolpanel#select-panel .border-section .neon-section`
-    );
     const textSection = document.querySelector(
       `${this.containerSelector} .toolpanel#select-panel .text-section`
     );
+    const textBorderSettings = textSection
+      ? textSection.querySelector(".border-settings")
+      : null;
     const textBoxSection = document.querySelector(
       `${this.containerSelector} .toolpanel#select-panel .textbox-section`
     );
     const borderSection = document.querySelector(
       `${this.containerSelector} .toolpanel#select-panel .border-section`
     );
+    const neonSection = borderSection
+      ? borderSection.querySelector(".neon-section")
+      : null;
     const fillSection = document.querySelector(
       `${this.containerSelector} .toolpanel#select-panel .fill-section`
     );
@@ -1380,6 +1383,19 @@ function selectionSettings() {
         if (objectOptionsSection) objectOptionsSection.style.display = "block";
         if (alignmentSection) alignmentSection.style.display = "block";
         if (effectSection) effectSection.style.display = "block";
+
+        const isTextPartiallySelected =
+          this.activeSelection.isEditing &&
+          this.activeSelection.selectionStart !==
+            this.activeSelection.selectionEnd;
+
+        if (textBorderSettings) {
+          if (isTextPartiallySelected) {
+            textBorderSettings.style.display = "none";
+          } else {
+            textBorderSettings.style.display = "block";
+          }
+        }
       }
 
       if (
@@ -1402,7 +1418,6 @@ function selectionSettings() {
         if (alignmentSection) alignmentSection.style.display = "block";
         if (effectSection) effectSection.style.display = "block";
         if (fillSection) fillSection.style.display = "block";
-        if (neonSection) neonSection.style.display = "block";
       }
 
       if (objType === "curvedline") {
@@ -1433,15 +1448,10 @@ function selectionSettings() {
       }
 
       if (objType === "weatherfrontline") {
-        if (borderSection) borderSection.style.display = "block";
-        if (neonSection) neonSection.style.display = "block";
-        if (objectOptionsSection) objectOptionsSection.style.display = "block";
-        if (alignmentSection) alignmentSection.style.display = "block";
-        if (effectSection) effectSection.style.display = "block";
         if (weatherFrontLineSection)
           weatherFrontLineSection.style.display = "block";
-        if (borderSection) borderSection.style.display = "none";
-        if (effectSection) effectSection.style.display = "none";
+        if (objectOptionsSection) objectOptionsSection.style.display = "block";
+        if (alignmentSection) alignmentSection.style.display = "block";
       }
 
       if (objType === "image") {
@@ -1510,6 +1520,18 @@ function selectionSettings() {
     this.activeSelection = null;
     updateSelectionType.call(this);
     updatePanelVisibility.call(this);
+  });
+
+  this.canvas.on("editing:entered", () => {
+    _self.activeSelection = _self.canvas.getActiveObject();
+    updatePanelVisibility.call(_self);
+    syncPanelWithSelection(_self);
+  });
+
+  this.canvas.on("text:selection:changed", () => {
+    _self.activeSelection = _self.canvas.getActiveObject();
+    updatePanelVisibility.call(_self);
+    syncPanelWithSelection(_self);
   });
 
   updatePanelVisibility.call(this);

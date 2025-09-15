@@ -7,6 +7,8 @@ import {
   saveWgcTmplt,
   deleteWgcTmplt,
   getFileData,
+  updateWgcTmplt,
+  accessDefaultTmplt,
 } from "../api/wgcApiService.js";
 
 const defaultTemplates = [];
@@ -19,12 +21,17 @@ function templates() {
   let currentPage = 1;
   const itemsPerPage = 8;
   const currentUsr = currentUserId;
+  const currentUsrDept = deptId;
   let myTemplateButton;
   let shareTemplateButton;
   let defaultTemplateButton;
   let defaultUserTemplates = [];
   const templateDataCache = new Map();
   const previewCache = new Map();
+
+  let hasDefaultAccess = false;
+  let isRegistrationMode = false;
+  let activeCategory = "my-template";
 
   const toolPanel = document.createElement("div");
   toolPanel.classList.add("toolpanel");
@@ -261,15 +268,22 @@ function templates() {
 
     const categories = [
       { name: "my-template", label: "내 템플릿" },
-      { name: "share-template", label: "공유 텐플릿" },
-      { name: "default-template", label: "기본 템플릿" },
+      { name: "share-template", label: "공유 템플릿" },
     ];
+
+    if (currentUsrDept === "1360718") {
+      categories.push({ name: "default-template", label: "기본 템플릿" });
+    }
+
     const selectCategoryTab = document.createElement("div");
     selectCategoryTab.id = "select-category-tab";
 
     categories.forEach((category) => {
       const selectCategoryButton = document.createElement("button");
-      selectCategoryButton.classList.add("toggle-switch-btn", "btn_w");
+      selectCategoryButton.classList.add(
+        "toggle-switch-btn",
+        "modal-toggle-btn"
+      );
       selectCategoryButton.textContent = category.label;
       selectCategoryButton.id = category.name;
       selectCategoryButton.addEventListener("click", async (e) => {
@@ -279,11 +293,63 @@ function templates() {
       selectCategoryTab.appendChild(selectCategoryButton);
     });
 
-    filterBar.appendChild(selectCategoryTab);
+    if (currentUsrDept === "1360718") {
+      const registerDefaultContainer = document.createElement("div");
+      registerDefaultContainer.className = "register-default-container";
 
-    const paginationContainer = document.createElement("div");
-    paginationContainer.id = "pagination";
-    paginationContainer.classList.add("pagination-container");
+      const registerDefaultLabel = document.createElement("label");
+      registerDefaultLabel.textContent = "등록 모드";
+
+      const registerDefaultToggle = document.createElement("div");
+      registerDefaultToggle.id = "register-default-btn";
+      registerDefaultToggle.className = "toggle-switch";
+
+      const toggleHandle = document.createElement("span");
+      toggleHandle.className = "toggle-handle";
+      registerDefaultToggle.appendChild(toggleHandle);
+
+      registerDefaultToggle.addEventListener("click", async () => {
+        const isActivating =
+          !registerDefaultToggle.classList.contains("active");
+
+        if (isActivating) {
+          if (!hasDefaultAccess) {
+            const code = prompt(
+              "기본 템플릿에 접근하려면 ID를 입력하세요:"
+            );
+            if (!code) return;
+            try {
+              const data = {
+                accessCode: code,
+                usrId: currentUsr,
+                deptId: currentUsrDept,
+              };
+              const response = await accessDefaultTmplt(data);
+              if (response.body === 1) {
+                hasDefaultAccess = true;
+              } else {
+                alert("인증에 실패했습니다.");
+                return;
+              }
+            } catch (error) {
+              console.error("인증 API 호출 실패:", error);
+              alert("인증 중 오류가 발생했습니다.");
+              return;
+            }
+          }
+        }
+
+        registerDefaultToggle.classList.toggle("active");
+        isRegistrationMode = registerDefaultToggle.classList.contains("active");
+
+        await renderFilteredTemplates();
+      });
+      registerDefaultContainer.appendChild(registerDefaultLabel);
+      registerDefaultContainer.appendChild(registerDefaultToggle);
+      selectCategoryTab.append(registerDefaultContainer);
+    }
+
+    filterBar.appendChild(selectCategoryTab);
 
     const searchBar = document.createElement("input");
     searchBar.type = "text";
@@ -296,6 +362,10 @@ function templates() {
       }
     });
     filterBar.appendChild(searchBar);
+
+    const paginationContainer = document.createElement("div");
+    paginationContainer.id = "pagination";
+    paginationContainer.classList.add("pagination-container");
 
     const shareGallery = document.createElement("div");
     shareGallery.classList.add("share-gallery");
@@ -335,6 +405,8 @@ function templates() {
   }
 
   function closeShareGallery() {
+    isRegistrationMode = false;
+    hasDefaultAccess = false;
     const modal = document.querySelector(".custom-modal-container");
     if (modal) {
       modal.classList.remove("active");
@@ -423,7 +495,23 @@ function templates() {
           const manageTemplate = document.createElement("div");
           manageTemplate.classList.add("manage-template");
 
-          if (template.shareYn === "N" || template.usrId === currentUsr) {
+          if (activeCategory === "default-template") {
+            const deleteButton = document.createElement("button");
+            deleteButton.innerHTML = `<svg id="Layer_1" x="0px" y="0px" viewBox="0 0 512 512" xml:space="preserve"><g><g><path fill="white" d="M425.298,51.358h-91.455V16.696c0-9.22-7.475-16.696-16.696-16.696H194.855c-9.22,0-16.696,7.475-16.696,16.696v34.662 H86.704c-9.22,0-16.696,7.475-16.696,16.696v51.357c0,9.22,7.475,16.696,16.696,16.696h5.072l15.26,359.906 c0.378,8.937,7.735,15.988,16.68,15.988h264.568c8.946,0,16.302-7.051,16.68-15.989l15.259-359.906h5.073 c9.22,0,16.696-7.475,16.696-16.696V68.054C441.994,58.832,434.519,51.358,425.298,51.358z M211.551,33.391h88.9v17.967h-88.9 V33.391z M372.283,478.609H139.719l-14.522-342.502h261.606L372.283,478.609z M408.602,102.715c-15.17,0-296.114,0-305.202,0 V84.749h305.202V102.715z"></path></g></g><g><g><path fill="white" d="M188.835,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C205.53,194.779,198.055,187.304,188.835,187.304z"></path></g></g><g><g><path fill="white" d="M255.998,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.474,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C272.693,194.779,265.218,187.304,255.998,187.304z"></path></g></g><g><g><path fill="white" d="M323.161,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 s16.696-7.475,16.696-16.696V204C339.857,194.779,332.382,187.304,323.161,187.304z"></path></g></g></svg>`;
+            deleteButton.classList.add("delete-button", "btn_r");
+            deleteButton.addEventListener("click", () =>
+              deleteTemplate(template)
+            );
+            manageTemplate.appendChild(deleteButton);
+          } else if (isRegistrationMode) {
+            const registerButton = document.createElement("button");
+            registerButton.textContent = "기본템플릿 등록";
+            registerButton.classList.add("register-button", "btn_b");
+            registerButton.addEventListener("click", () =>
+              registerAsDefaultTemplate(template)
+            );
+            manageTemplate.appendChild(registerButton);
+          } else if (template.usrId === currentUsr) {
             const applyButton = document.createElement("button");
             applyButton.textContent = "적용";
             applyButton.classList.add("apply-button", "btn_w");
@@ -453,16 +541,6 @@ function templates() {
             manageTemplate.appendChild(deleteButton);
             manageTemplate.appendChild(shareButton);
           } else {
-            const saveButton = document.createElement("button");
-            saveButton.textContent = "담기";
-            saveButton.classList.add("save-button", "btn_b");
-            saveButton.addEventListener("click", () => saveTemplate(template));
-
-            const deleteButton = document.createElement("button");
-            deleteButton.innerHTML = `<svg id="Layer_1" x="0px" y="0px" viewBox="0 0 512 512" xml:space="preserve"><g><g><path fill="white" d="M425.298,51.358h-91.455V16.696c0-9.22-7.475-16.696-16.696-16.696H194.855c-9.22,0-16.696,7.475-16.696,16.696v34.662 H86.704c-9.22,0-16.696,7.475-16.696,16.696v51.357c0,9.22,7.475,16.696,16.696,16.696h5.072l15.26,359.906 c0.378,8.937,7.735,15.988,16.68,15.988h264.568c8.946,0,16.302-7.051,16.68-15.989l15.259-359.906h5.073 c9.22,0,16.696-7.475,16.696-16.696V68.054C441.994,58.832,434.519,51.358,425.298,51.358z M211.551,33.391h88.9v17.967h-88.9 V33.391z M372.283,478.609H139.719l-14.522-342.502h261.606L372.283,478.609z M408.602,102.715c-15.17,0-296.114,0-305.202,0 V84.749h305.202V102.715z"></path></g></g><g><g><path fill="white" d="M188.835,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C205.53,194.779,198.055,187.304,188.835,187.304z"></path></g></g><g><g><path fill="white" d="M255.998,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.474,16.696,16.696,16.696 c9.22,0,16.696-7.475,16.696-16.696V204C272.693,194.779,265.218,187.304,255.998,187.304z"></path></g></g><g><g><path fill="white" d="M323.161,187.304c-9.22,0-16.696,7.475-16.696,16.696v206.714c0,9.22,7.475,16.696,16.696,16.696 s16.696-7.475,16.696-16.696V204C339.857,194.779,332.382,187.304,323.161,187.304z"></path></g></g></svg>`;
-            deleteButton.classList.add("delete-button", "btn_r");
-            deleteButton.style.display = "none";
-
             const applyButton = document.createElement("button");
             applyButton.textContent = "적용";
             applyButton.classList.add("apply-button", "btn_w");
@@ -470,15 +548,13 @@ function templates() {
               applyTemplate(template, _self.canvas)
             );
 
-            const shareButton = document.createElement("button");
-            shareButton.textContent = "공유";
-            shareButton.classList.add("share-button", "btn_w");
-            shareButton.style.display = "none";
+            const saveButton = document.createElement("button");
+            saveButton.textContent = "담기";
+            saveButton.classList.add("save-button", "btn_b");
+            saveButton.addEventListener("click", () => saveTemplate(template));
 
             manageTemplate.appendChild(applyButton);
             manageTemplate.appendChild(saveButton);
-            manageTemplate.appendChild(deleteButton);
-            manageTemplate.appendChild(shareButton);
           }
 
           templateContent.appendChild(templateElement);
@@ -500,19 +576,43 @@ function templates() {
   }
 
   async function renderFilteredTemplates() {
-    let categoryName;
-    let categoryBtn;
-    if (isMyData) {
-      categoryName = "my-template";
-      categoryBtn = myTemplateButton;
-    } else {
-      categoryName = "share-template";
-      categoryBtn = shareTemplateButton;
-    }
-    getFilteredTemplatesByCategory(categoryName, categoryBtn);
+    getFilteredTemplatesByCategory(
+      activeCategory,
+      document.querySelector(`#${activeCategory}`)
+    );
   }
 
   async function getFilteredTemplatesByCategory(categoryName, target) {
+    activeCategory = categoryName;
+
+    if (categoryName === "default-template" && !hasDefaultAccess) {
+      const code = prompt("기본 템플릿에 접근하려면 ID를 입력하세요:");
+      if (!code) {
+        toggleRepoCategory(document.querySelector("#my-template"));
+        return;
+      }
+      try {
+        const data = {
+          accessCode: code,
+          usrId: currentUsr,
+          deptId: currentUsrDept,
+        };
+        const response = await accessDefaultTmplt(data);
+        if (response.body === 1) {
+          hasDefaultAccess = true;
+        } else {
+          alert("인증에 실패했습니다.");
+          toggleRepoCategory(document.querySelector("#my-template"));
+          return;
+        }
+      } catch (error) {
+        console.error("인증 API 호출 실패:", error);
+        alert("인증 중 오류가 발생했습니다.");
+        toggleRepoCategory(document.querySelector("#my-template"));
+        return;
+      }
+    }
+
     try {
       if (categoryName === "my-template") {
         isMyData = true;
@@ -520,19 +620,22 @@ function templates() {
         isMyData = false;
       }
 
-      let filteredTemplates = isMyData
-        ? TemplatesList.filter((template) => template.usrId === currentUsr)
-        : TemplatesList.filter(
-            (template) =>
-              template.shareYn === "Y" && template.usrId !== "default"
-          );
-      currentPage = 1;
+      let filteredTemplates;
 
-      if (categoryName === "default-template") {
+      if (categoryName === "my-template") {
+        filteredTemplates = TemplatesList.filter(
+          (template) => template.usrId === currentUsr
+        );
+      } else if (categoryName === "share-template") {
+        filteredTemplates = TemplatesList.filter(
+          (template) => template.shareYn === "Y" && template.usrId !== "default"
+        );
+      } else if (categoryName === "default-template") {
         filteredTemplates = defaultUserTemplates;
       }
 
-      renderTemplateGallery(filteredTemplates);
+      currentPage = 1;
+      renderTemplateGallery(filteredTemplates || []);
       toggleRepoCategory(target);
     } catch (error) {
       console.error("템플릿 필터링 실패:", error);
@@ -542,17 +645,22 @@ function templates() {
 
   function filterTemplatesBySearch(query) {
     let filteredTemplates;
-    if (isMyData) {
+    if (activeCategory === "my-template") {
       filteredTemplates = TemplatesList.filter(
         (template) =>
           template.tmpltNm.toLowerCase().includes(query.toLowerCase()) &&
           template.usrId === currentUsr
       );
-    } else {
+    } else if (activeCategory === "share-template") {
       filteredTemplates = TemplatesList.filter(
         (template) =>
           template.tmpltNm.toLowerCase().includes(query.toLowerCase()) &&
-          template.shareYn === "Y"
+          template.shareYn === "Y" &&
+          template.usrId !== "default"
+      );
+    } else if (activeCategory === "default-template") {
+      filteredTemplates = defaultUserTemplates.filter((template) =>
+        template.tmpltNm.toLowerCase().includes(query.toLowerCase())
       );
     }
     currentPage = 1;
@@ -586,8 +694,37 @@ function templates() {
     }
   }
 
+  async function registerAsDefaultTemplate(template) {
+    if (
+      confirm(`"${template.tmpltNm}"을(를) 기본 템플릿으로 등록하시겠습니까?`)
+    ) {
+      try {
+        const tmpltData = await fetchTemplateData(template.filePath);
+        if (!tmpltData) {
+          throw new Error("템플릿 데이터를 가져올 수 없습니다.");
+        }
+        const newTemplate = {
+          usrId: "default",
+          tmpltNm: template.tmpltNm,
+          tmpltData: tmpltData,
+          registDate: new Date().getTime(),
+          shareYn: "N",
+        };
+        await saveWgcTmplt(newTemplate);
+        templateDataCache.delete(template.filePath);
+        previewCache.delete(template.filePath);
+        await updateTemplateGallery();
+        await renderFilteredTemplates();
+        alert(`"${template.tmpltNm}"을(를) 기본 템플릿으로 등록했습니다.`);
+      } catch (error) {
+        console.error("기본 템플릿 등록 실패:", error);
+        alert("기본 템플릿 등록에 실패했습니다.");
+      }
+    }
+  }
+
   async function deleteTemplate(template) {
-    if (template.usrId !== currentUsr) {
+    if (template.usrId !== currentUsr && template.usrId !== "default") {
       alert("본인의 템플릿만 삭제할 수 있습니다.");
       return;
     }
@@ -799,36 +936,12 @@ function templates() {
   }
 
   function toggleRepoCategory(target) {
-    const selectMyTemplateButton = document.querySelector("#my-template");
-    const selectShareTemplateButton = document.querySelector("#share-template");
-    const selectDefaultTemplateButton =
-      document.querySelector("#default-template");
-
-    if (!selectMyTemplateButton || !selectShareTemplateButton) {
-      console.warn("버튼 요소를 찾을 수 없습니다.");
-      return;
-    }
-
-    const isMyTemplateButton =
-      target.id === "my-template" || target.closest("#my-template");
-    const isShareTemplateButton =
-      target.id === "share-template" || target.closest("#share-template");
-    const isDefaultTemplateButton =
-      target.id === "default-template" || target.closest("#default-template");
-
-    if (isMyTemplateButton) {
-      selectMyTemplateButton.classList.add("active");
-      selectShareTemplateButton.classList.remove("active");
-      selectDefaultTemplateButton.classList.remove("active");
-    } else if (isShareTemplateButton) {
-      selectShareTemplateButton.classList.add("active");
-      selectMyTemplateButton.classList.remove("active");
-      selectDefaultTemplateButton.classList.remove("active");
-    } else if (isDefaultTemplateButton) {
-      selectDefaultTemplateButton.classList.add("active");
-      selectMyTemplateButton.classList.remove("active");
-      selectShareTemplateButton.classList.remove("active");
-    }
+    if (!target) return;
+    const buttons = document.querySelectorAll(
+      "#select-category-tab .toggle-switch-btn"
+    );
+    buttons.forEach((button) => button.classList.remove("active"));
+    target.classList.add("active");
   }
 
   updateTemplateGallery();

@@ -5,6 +5,7 @@ import {
   deleteWgcEdit,
   saveWgcEdit,
   getFileData,
+  updateWgcEdit,
 } from "../api/wgcApiService.js";
 import { imgEditor } from "../index.ts";
 import { resizeImg } from "../utils/resizeImg.js";
@@ -73,7 +74,7 @@ async function openEditRepository() {
 
   categories.forEach((category) => {
     const selectCategoryButton = document.createElement("button");
-    selectCategoryButton.classList.add("toggle-switch-btn", "btn_w");
+    selectCategoryButton.classList.add("toggle-switch-btn", "modal-toggle-btn");
     selectCategoryButton.textContent = category.label;
     selectCategoryButton.id = category.name;
     selectCategoryButton.addEventListener("click", async (e) => {
@@ -528,8 +529,7 @@ async function shareData(data) {
         if (!editData) {
           throw new Error("편집 데이터를 가져올 수 없습니다.");
         }
-        await deleteWgcEdit({ editId: data.editId });
-        await saveWgcEdit({ ...data, editData, shareYn: "Y" });
+        await updateWgcEdit({ ...data, editData });
         editDataCache.delete(data.filePath);
         previewCache.delete(data.filePath);
         await fetchEditData();
@@ -546,8 +546,7 @@ async function shareData(data) {
         if (!editData) {
           throw new Error("편집 데이터를 가져올 수 없습니다.");
         }
-        await deleteWgcEdit({ editId: data.editId });
-        await saveWgcEdit({ ...data, editData, shareYn: "N" });
+        await updateWgcEdit({ ...data, editData });
         editDataCache.delete(data.filePath);
         previewCache.delete(data.filePath);
         await fetchEditData();
